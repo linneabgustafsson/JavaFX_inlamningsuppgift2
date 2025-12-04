@@ -1,0 +1,48 @@
+package com.linnea;
+
+import com.linnea.entity.Vehicle;
+import com.linnea.entity.Member;
+
+public class Rental {
+
+    private Member member;
+    private Vehicle vehicle;
+    private int numberOfDays;
+
+    public Rental() {
+    }
+
+    public Rental(Vehicle vehicle, int numberOfDays, Member member) {
+        this.member = member;
+        this.vehicle = vehicle;
+        this.numberOfDays = numberOfDays;
+    }
+
+    public Member getMember()   {
+        return member;
+    }
+
+    public Vehicle getItem()   {
+        return vehicle;
+    }
+
+    public int getNumberOfDays() {
+        return numberOfDays;
+    }
+
+    public void setMember(Member member) {
+        this.member = member;
+    }
+
+    public void setItem(Vehicle vehicle) {
+        this.vehicle = vehicle;
+    }
+
+    public void setNumberOfDays(int numberOfDays) {
+        this.numberOfDays = numberOfDays;
+    }
+
+    public String toString()    {
+        return "Medlemmen som bokat: \n" + member + "\nDet uthyrda fordonet:\n " + vehicle + "\nAntal uthyrningsdagar: " + numberOfDays;
+    }
+}
