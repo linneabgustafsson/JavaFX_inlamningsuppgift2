@@ -3,7 +3,9 @@ package com.linnea;
 import com.linnea.entity.Vehicle;
 import com.linnea.entity.Member;
 
-public class Rental {
+import java.io.Serializable;
+
+public class Rental implements Serializable {
 
     private Member member;
     private Vehicle vehicle;
@@ -43,6 +45,6 @@ public class Rental {
     }
 
     public String toString()    {
-        return "Medlemmen som bokat: \n" + member + "\nDet uthyrda fordonet:\n " + vehicle + "\nAntal uthyrningsdagar: " + numberOfDays;
+        return "Medlemmen som bokat: \n" + member + "\n\nDet uthyrda fordonet:\n " + vehicle + "\n\nAntal uthyrningsdagar: " + numberOfDays;
     }
 }

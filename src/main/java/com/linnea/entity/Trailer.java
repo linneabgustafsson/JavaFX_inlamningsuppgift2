@@ -1,6 +1,8 @@
 package com.linnea.entity;
 
-public class Trailer extends Vehicle {
+import java.io.Serializable;
+
+public class Trailer extends Vehicle implements Serializable {
 
     private int length;
     private int width;
@@ -28,11 +30,6 @@ public class Trailer extends Vehicle {
 
     public void setWidth(int width) {
         this.width = width;
-    }
-
-    @Override
-    public void instructionManual() {
-        System.out.println("🚘 MANUAL FÖR SLÄPVAGN 🚘\nSätt fast släpvagnen på bilens dragkrok.");
     }
 
     @Override

@@ -3,35 +3,44 @@ import com.linnea.Inventory;
 import com.linnea.PricePolicy;
 import com.linnea.Rental;
 import com.linnea.entity.*;
-
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
 public class RentalService implements PricePolicy {
 
-    Scanner scanner = new Scanner(System.in);
-
-    private List<Rental> rentalList;
     private MembershipService membershipService;
     private Inventory inventory;
+
+    private String rentalListFile;
+    private List<Rental> rentalList;
     private List<Rental> todaysRentals = new ArrayList<>();
+    private ArrayList<Integer> sumupTodaysRentals = new ArrayList<Integer>();
 
     public RentalService()  {
     }
 
-    public RentalService(MembershipService membershipService, Inventory inventory, List<Rental> rentalList)  {
+    public RentalService(MembershipService membershipService, Inventory inventory, String rentalListFile)  {
         this.membershipService = membershipService;
         this.inventory = inventory;
-        this.rentalList = rentalList;
+        this.rentalListFile = rentalListFile;
+        this.rentalList = new ArrayList<>();
     }
 
     public List<Rental> getRentalList() {
         return rentalList;
     }
 
-    public void setMemberList(List<Rental> rentalList) {
+    public void setRentalList(List<Rental> rentalList) {
         this.rentalList = rentalList;
+    }
+
+    public String getRentalListFile() {
+        return rentalListFile;
+    }
+
+    public void setRentalListFile(String rentalListFile) {
+        this.rentalListFile = rentalListFile;
     }
 
     public List<Rental> getTodaysRentals()  {
@@ -42,14 +51,64 @@ public class RentalService implements PricePolicy {
         this.todaysRentals = todaysRentals;
     }
 
-    public void printListAllItems()    {
+    public ArrayList<Integer> getSumupTodaysRentals() {
+        return sumupTodaysRentals;
+    }
 
-        for (Vehicle vehicle : inventory.getInventoryList())  {
-            System.out.println(vehicle);
+    public void setSumupTodaysRentals()  {
+        this.sumupTodaysRentals = sumupTodaysRentals;
+    }
+
+    public void initialValueRentalList() {
+
+        Member member1 = membershipService.searchMemberNY("Emma");
+        Vehicle vehicle1 = inventory.findVehicleByItemNr("205");
+        Rental rental1 = new Rental(vehicle1, 5, member1);
+        rentalList.add(rental1);
+        member1.addRentalToHistory(rental1);
+
+        Member member2 = membershipService.searchMemberNY("Emil");
+        Vehicle vehicle2 = inventory.findVehicleByItemNr("125");
+        Rental rental2 = new Rental(vehicle2, 8, member2);
+        rentalList.add(rental2);
+        member2.addRentalToHistory(rental2);
+
+        Member member3 = membershipService.searchMemberNY("Smilla");
+        Vehicle vehicle3 = inventory.findVehicleByItemNr("145");
+        Rental rental3 = new Rental(vehicle3, 14, member3);
+        rentalList.add(rental3);
+        member3.addRentalToHistory(rental3);
+
+        Member member4 = membershipService.searchMemberNY("Eja");
+        Vehicle vehicle4 = inventory.findVehicleByItemNr("117");
+        Rental rental4 = new Rental(vehicle4, 14, member4);
+        rentalList.add(rental4);
+        member4.addRentalToHistory(rental4);
+    }
+
+    public void writeToFileRentals() {
+        try (ObjectOutputStream skapaFilObjekt = new ObjectOutputStream(new FileOutputStream(rentalListFile, false))) {
+
+            skapaFilObjekt.writeObject(rentalList);
+        }
+
+        catch (IOException e) {
+            System.out.println("Hamnar här om fel vid läsning av fil" + e.getMessage());
         }
     }
 
-    //Strömmar...
+    public void readFromFileRentals(String rentalListFile) {
+
+        try (ObjectInputStream objectInputStream = new ObjectInputStream(new FileInputStream(rentalListFile))) {
+
+            rentalList = (List<Rental>) objectInputStream.readObject();
+
+        } catch (IOException | ClassNotFoundException e) {
+
+            System.out.println("Hamnar här om fel vid läsning av fil" + e.getMessage());
+        }
+    }
+
     public List<Trailer> filterItemsEndastTrailersDEN_NYA() {
 
         List<Trailer> allTrailers = new ArrayList<>();
@@ -64,8 +123,150 @@ public class RentalService implements PricePolicy {
         return allTrailers;
     }
 
-    public void filterAndSearchItemDEN_GAMLA()   {
+    public boolean checkIfRentedOut(Vehicle vehicle) {
+
+        for (Rental rental : rentalList) {
+            if (vehicle.getItemNumber().equals(rental.getItem().getItemNumber())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public Rental addBooking(Vehicle chosenVehicle, int chosenNumberOfDays, Member chosenMember)   {
+
+        Rental rental = new Rental(chosenVehicle, chosenNumberOfDays, chosenMember);
+
+        rentalList.add(rental);
+        todaysRentals.add(rental);
+        chosenMember.addRentalToHistory(rental);
+        return rental;
+    }
+
+    public int calculatePrice(Rental rental)  {
+
+        int finalPrice;
+        int priceAfterDiscount;
+
+        if (rental.getMember().getMembershipLevel().equalsIgnoreCase("student")) {
+
+            int standardPrice = rental.getItem().getPrice();
+
+            priceAfterDiscount = studentDiscount(standardPrice);
+            finalPrice = priceAfterDiscount * rental.getNumberOfDays();
+            sumupTodaysRentals.add(finalPrice);
+            return finalPrice;
+        }
+
+        if (rental.getMember().getMembershipLevel().equalsIgnoreCase("premium")) {
+
+            priceAfterDiscount = premiumDiscount(rental.getItem().getPrice());
+            finalPrice = priceAfterDiscount * rental.getNumberOfDays();
+            sumupTodaysRentals.add(finalPrice);
+            return finalPrice;
+        }
+
+        finalPrice = rental.getItem().getPrice() * rental.getNumberOfDays();
+        sumupTodaysRentals.add(finalPrice);
+        return finalPrice;
+    }
+
+    public int calculateTodaysRevenue() {
+
+        int totalRevenue = 0;
+
+        if (todaysRentals.isEmpty())    {
+            return 0;
+        }
+
+        for (int i = 0; i < sumupTodaysRentals.size(); i++)   {
+            totalRevenue = totalRevenue + sumupTodaysRentals.get(i);
+        }
+
+        return totalRevenue;
+    }
+
+    public void returnItemNYA(Rental rental) {
+
+        rentalList.remove(rental);
+        todaysRentals.remove(rental);
+    }
+
+    @Override
+        public int studentDiscount(int price) {
+        int newPriceDiscount = (int) (price * 0.8);
+        return newPriceDiscount;
+    }
+
+    @Override
+    public int premiumDiscount(int price) {
+        int newPriceDiscount = (int) (price * 0.9);
+        return newPriceDiscount;
+    }
+
+
+    public void printListOngoingRentals()    {
+
+        if (rentalList.isEmpty())   {
+            System.out.println("Vi har inga fordon uthyrda just nu.");
+        }
+
+        else {
+            System.out.println("\nHär är en sammanställning av alla pågående uthyrningar: ");
+
+            for (Rental rental : rentalList) {
+                System.out.println("🔸" + rental.getMember().getFirstName() + " (personnummer " +
+                        rental.getMember().getPersonalIdNumber() + ")" + " hyr en " +
+                        rental.getItem().getVehicleType() + " (artikelnummer " +
+                        rental.getItem().getItemNumber() + ") under " + rental.getNumberOfDays() + " dagar.");
+            }
+        }
+   }
+    public void returnItem (Rental rental)    {
+
+//        rentalList.remove(rental);
+//        todaysRentals.remove(rental);
+//        printLisTOngoingRentals();
 //
+//
+//        System.out.println("\nSkriv artikelnummer på det fordon som ska lämnas tillbaka:");
+//        String userInputItemNumber = scanner.nextLine();
+//
+//        Vehicle chosenVehicle = inventory.findVehicle(userInputItemNumber);
+//        int findIndex = -1;
+//
+//        for (int i = 0; i < rentalList.size(); i++) {
+//
+//            //Rental rental = rentalList.get(i);
+//
+//            if (rental.getItem().getItemNumber().equals(userInputItemNumber)) {
+//                findIndex = i;
+//                break;
+//            }
+//        }
+//        Rental currentRental = rentalList.remove(findIndex);
+//
+//        if (todaysRentals.isEmpty())    {
+//        }
+//
+//        else {
+//
+//            for (int i = 0; i < todaysRentals.size(); i++)  {
+//
+//                Rental rental = todaysRentals.get(i);
+//
+//                if (rental.getItem().getItemNumber().equals(userInputItemNumber));  {
+//                    findIndex = i;
+//                    break;
+//                }
+//            }
+//            Rental currentRentalToday = todaysRentals.remove(findIndex);
+//        }
+//        System.out.println("Nu är fordonet återlämnat.");
+    }
+    public void filterAndSearchItemDEN_GAMLA()   {
+
 //        if (userInputProductType.equalsIgnoreCase("släpvagn")) {
 //            System.out.println("Vi har följande släpvagnar:\n");
 //
@@ -103,210 +304,32 @@ public class RentalService implements PricePolicy {
 //            }
 //        }
     }
-
-    public void bookItemDEN_NYA(Vehicle chosenVehicle, int chosenNumberOfDays, Member chosenMember)   {
-        rentalList.add(new Rental(chosenVehicle, chosenNumberOfDays, chosenMember));
-        todaysRentals.add(new Rental(chosenVehicle, chosenNumberOfDays, chosenMember));
-
-        chosenMember.getOrderHistory().add(new Rental(chosenVehicle, chosenNumberOfDays, chosenMember));
-
-    }
-
     public void bookItemDENGAMLA()  {
-        System.out.println("📝 Här registrerar du medlemmens bokning. Börja med att söka fram rätt medlem.\n");
-        Member chosenMember = membershipService.searchForMember();
 
-        System.out.println("\nNu ska du välja vilket fordon medlemmen ska hyra genom att göra en sökning.\n");
-        //filterAndSearchItemDEN_GAMLA();
-
-        Vehicle chosenVehicle;
-        boolean itemNotAvailable = true;
-
-        do {
-            System.out.println("\nSkriv artikelnummer på det fordon som medlemmen vill hyra:");
-            String userInputItemNumber = scanner.nextLine();
-            chosenVehicle = inventory.findItem(userInputItemNumber);
-
-            itemNotAvailable = false;
-
-            for (Rental rental : rentalList)    {
-                if (chosenVehicle == rental.getItem()) {
-                    System.out.println("Fordon med artikelnummer " + userInputItemNumber + " är redan uthyrd. Välj något annat.");
-                    itemNotAvailable = true;
-                }
-            }
-
-            if (chosenVehicle == null) {
-                System.out.println("Det finns inget fordon med det artikelnumret. Skriv in ett korrekt artikelnummer.");
-                itemNotAvailable = true;
-            }
-
-        }
-        while (itemNotAvailable);
-
-        System.out.println("Skriv hur många dagar du vill hyra: ");
-        int numberOfDays = scanner.nextInt();
-        scanner.nextLine();
-
-        rentalList.add(new Rental(chosenVehicle, numberOfDays, chosenMember));
-        todaysRentals.add(new Rental(chosenVehicle, numberOfDays, chosenMember));
-
-        chosenMember.getOrderHistory().add(new Rental(chosenVehicle, numberOfDays, chosenMember));
-
-        System.out.println("Här kommer en sammanställning av bokningen:");
-
-        System.out.println("🔸" + chosenMember.getFirstName() + " (personnummer " +
-                chosenMember.getPersonalIdNumber() + ")" + " ska hyra en " +
-                chosenVehicle.getVehicleType() + " (artikelnummer " +
-                chosenVehicle.getItemNumber() + ") under " + numberOfDays + " dagar.\n");
-
-
-
+//        Vehicle chosenVehicle;
+//        boolean itemNotAvailable = true;
+//
+//        do {
+//            System.out.println("\nSkriv artikelnummer på det fordon som medlemmen vill hyra:");
+//            String userInputItemNumber = scanner.nextLine();
+//            chosenVehicle = inventory.findVehicleByItemNr(userInputItemNumber);
+//
+//            itemNotAvailable = false;
+//
+//            for (Rental rental : rentalList)    {
+//                if (chosenVehicle == rental.getItem()) {
+//                    System.out.println("Fordon med artikelnummer " + userInputItemNumber + " är redan uthyrd. Välj något annat.");
+//                    itemNotAvailable = true;
+//                }
+//            }
+//            if (chosenVehicle == null) {
+//                System.out.println("Det finns inget fordon med det artikelnumret. Skriv in ett korrekt artikelnummer.");
+//                itemNotAvailable = true;
+//            }
+//        }
+//        while (itemNotAvailable);
    }
 
-    public void printListOngoingRentals()    {
-
-        if (rentalList.isEmpty())   {
-            System.out.println("Vi har inga fordon uthyrda just nu.");
-        }
-
-        else {
-            System.out.println("\nHär är en sammanställning av alla pågående uthyrningar: ");
-
-            for (Rental rental : rentalList) {
-                System.out.println("🔸" + rental.getMember().getFirstName() + " (personnummer " +
-                        rental.getMember().getPersonalIdNumber() + ")" + " hyr en " +
-                        rental.getItem().getVehicleType() + " (artikelnummer " +
-                        rental.getItem().getItemNumber() + ") under " + rental.getNumberOfDays() + " dagar.");
-            }
-        }
-   }
-
-   public void printListTodaysRentals()    {
-
-        if (todaysRentals.isEmpty())    {
-            System.out.println("Det har inte registrerats någon uthyrning idag.");
-        }
-
-        else {
-            System.out.println("\nDe uthyrningar som registrerats idag är: ");
-
-            for (Rental rental : todaysRentals) {
-                System.out.println("🔸" + rental.getMember().getFirstName() + " (personnummer " +
-                        rental.getMember().getPersonalIdNumber() + ")" + " hyr en " +
-                        rental.getItem().getVehicleType() + " (artikelnummer " +
-                        rental.getItem().getItemNumber() + ") under " + rental.getNumberOfDays() + " dagar.");
-            }
-        }
-   }
-
-    public void returnItem ()    {
-       System.out.println("🔄 Du har valt alternativet avsluta uthyrning och lämna tillbaka fordon.");
-
-        printListOngoingRentals();
-
-        if (rentalList.isEmpty())   {
-            System.out.println("Du kan därför inte avsluta någon uthyrning.");
-            return;
-        }
-
-        System.out.println("\nSkriv artikelnummer på det fordon som ska lämnas tillbaka:");
-        String userInputItemNumber = scanner.nextLine();
-
-        Vehicle chosenVehicle = inventory.findItem(userInputItemNumber);
-
-        int findIndex = -1;
-
-        for (int i = 0; i < rentalList.size(); i++) {
-
-            Rental rental = rentalList.get(i);
-
-            if (rental.getItem().getItemNumber().equals(userInputItemNumber)) {
-                findIndex = i;
-                break;
-            }
-        }
-
-        Rental currentRental = rentalList.remove(findIndex);
-
-        if (todaysRentals.isEmpty())    {
-        }
-
-        else {
-
-            for (int i = 0; i < todaysRentals.size(); i++)  {
-
-                Rental rental = todaysRentals.get(i);
-
-                if (rental.getItem().getItemNumber().equals(userInputItemNumber));  {
-                    findIndex = i;
-                    break;
-                }
-            }
-
-            Rental currentRentalToday = todaysRentals.remove(findIndex);
-        }
-
-        System.out.println("Nu är fordonet återlämnat.");
-    }
-
-    public void sumRevenue() {
-        System.out.println("\n💰 Här kommer en summering av dagens intäkter.");
-
-        if (todaysRentals.isEmpty())    {
-            System.out.println("Det har inte registrerats någon uthyrning idag och intäkterna kan därför inte summeras.");
-            return;
-        }
-
-        printListTodaysRentals();
-        System.out.println("");
-
-        int priceAfterDiscount;
-        int finalPrice;
-        ArrayList<Integer> sumupTodaysRentals = new ArrayList<Integer>();
-
-        for (Rental rental : todaysRentals)  {
-
-            if (rental.getMember().getMembershipLevel().equalsIgnoreCase("standard"))   {
-
-                finalPrice = rental.getItem().getPrice() * rental.getNumberOfDays();
-                sumupTodaysRentals.add(finalPrice);
-            }
-
-            else if (rental.getMember().getMembershipLevel().equalsIgnoreCase("student"))   {
-
-                priceAfterDiscount = studentDiscount(rental.getItem().getPrice());
-                finalPrice = priceAfterDiscount * rental.getNumberOfDays();
-                sumupTodaysRentals.add(finalPrice);
-            }
-
-             else if (rental.getMember().getMembershipLevel().equalsIgnoreCase("premium"))   {
-
-                 priceAfterDiscount = premiumDiscount(rental.getItem().getPrice());
-                 finalPrice = priceAfterDiscount * rental.getNumberOfDays();
-                 sumupTodaysRentals.add(finalPrice);
-            }
-        }
-
-        int totalRevenue = 0;
-
-        for (int i = 0; i < sumupTodaysRentals.size(); i++)   {
-            totalRevenue = totalRevenue + sumupTodaysRentals.get(i);
-        }
-
-        System.out.println("De totala intäkterna för dagens uthyrningar är " + totalRevenue + " kr.");
-    }
-
-    @Override
-    public int studentDiscount(int price) {
-        //(int) är en casting, en konvertering så att funkar med procent vilket ju är decimaltal egentligen, en int.
-        int newPriceDiscount = (int) (price * 0.8);
-        return newPriceDiscount;
-    }
-
-    @Override
-    public int premiumDiscount(int price) {
-        int newPriceDiscount = (int) (price * 0.9);
-        return newPriceDiscount;
-    }
 }
+
+

@@ -1,70 +1,207 @@
 
-/************TABPANE************/
-
-/* Label i flikarna */
-.tab-pane.spaced-tabs .tab .label {
-    -fx-font-family: "Arial";
-    -fx-font-size: 13px;
-    -fx-text-fill: #333333;
+/************TableView************/
+#customTable .column-header-background {
+    -fx-background-color: #85a199;
 }
 
-/* Vald flik: ljus bakgrund, fet text */
-.tab-pane.spaced-tabs .tab:selected {
-    -fx-background-color: #f3f3f3;   /* färgen på själva fliken */
-    -fx-border-color: #707070;
-    -fx-border-width: 1 1 1 1;       /* kant */
+#customTable .column-header {
+    -fx-background-color: #85a199;
 }
 
-.tab-pane.spaced-tabs .tab:selected .label {
-    -fx-font-weight: bold;
-    -fx-text-fill: #000000;
+#customTable .filler {
+    -fx-background-color: #85a199;
 }
 
-/* Ta bort blå fokusram på vår TabPane */
-.tab-pane.spaced-tabs:focused {
+#customTable .column-header:hover,
+#customTable .column-header-background:hover {
+    -fx-background-color: #6f867f;
+}
+
+#customTable .spaced-tabs:focused {
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
 }
 
-/*!* Extra säkerhet: om focus ligger på vald flik *!*/
-/*.tab-pane.spaced-tabs .tab:selected:focused {*/
-/*    -fx-focus-color: transparent;*/
-/*    -fx-faint-focus-color: transparent;*/
-/*}*/
+#customTable .column-header {
+    -fx-border-color: black;
+    -fx-border-width: 1px;
+    -fx-border-style: solid;
+    -fx-background-color: #85a199;
+}
+
+#customTable .column-header .label {
+    -fx-text-fill: #363232;
+    -fx-font: bold 14px "System";
+    -fx-font-family: "Arial";
+    -fx-padding: 4px;
+}
+
+#customTable .column-header-background,
+#customTable .filler {
+    -fx-background-color: #85a199;
+}
+
+#customTable .table-row-cell:odd {
+    -fx-background-color: #f7faf9;
+}
+
+#customTable .table-row-cell:even {
+    -fx-background-color: white;
+}
+
+#customTable .table-row-cell:hover {
+    -fx-background-color: #e3ece8;
+}
+
+#customTable .table-row-cell:selected {
+    -fx-background-color: #c0d9d0;
+    -fx-text-fill: black;
+}
+
+#customTable .table-cell:selected {
+    -fx-text-fill: black;
+}
+
+#customTable:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+#customTable .table-row-cell:focused {
+    -fx-background-insets: 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+#customTable {
+    -fx-selection-bar: #c0d9d0;
+    -fx-selection-bar-non-focused: #c0d9d0;
+    -fx-selection-bar-text: black;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+
+/**********Alertbox - ta bort medlem*************/
+.remove-member-alert {
+    -fx-background-color: #96ACA6;
+}
+
+.remove-member-alert .label {
+    -fx-text-fill: #1E2625;
+}
+
+.remove-member-alert .header-panel {
+    -fx-background-color: #85a199;
+}
+
+.remove-member-alert .content {
+    -fx-background-color: #96ACA6;
+}
+
+.remove-member-alert .button {
+    -fx-background-color: linear-gradient(#8DA8A2, #7F9791);
+
+    -fx-text-fill: #1E2625;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Arial";
+
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-padding: 10 22;
+
+    -fx-border-color: #1E2625;
+    -fx-border-width: 1.3px;
+
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 7, 0, 0, 2);
+
+    -fx-cursor: hand;
+}
+
+.remove-member-alert .button:hover {
+    -fx-background-color: linear-gradient(#829A94, #738B85);
+    -fx-border-color: #181E1D;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 12, 0, 0, 3);
+}
+
+.remove-member-alert .button:pressed {
+    -fx-background-color: linear-gradient(#6D827D, #5E726D);
+    -fx-effect: none;
+    -fx-translate-y: 1;
+}
+
+
+/****************NY**********************/
+
+.button-ordinary {
+    -fx-background-color: linear-gradient(
+        rgba(227,236,233,0.95),
+        rgba(198,212,207,0.90)
+    );
+
+    -fx-text-fill: #1F2A26;
+    -fx-font-family: "Arial";
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+
+    -fx-border-color: rgba(79,111,102,0.55);
+    -fx-border-width: 1.3px;
+
+    -fx-padding: 10 24;
+
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.22), 11, 0.18, 0, 2);
+    -fx-cursor: hand;
+}
+
+.button-ordinary:hover {
+    -fx-background-color: linear-gradient(
+        rgba(238,245,243,0.98),
+        rgba(208,222,217,0.93)
+    );
+    -fx-border-color: rgba(79,111,102,0.75);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.30), 13, 0.22, 0, 3);
+}
+
+.button-ordinary:pressed {
+    -fx-translate-y: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.16), 8, 0.16, 0, 1);
+}
+
+.button-return {
+    -fx-background-color: linear-gradient(#7F9C95, #6F8F86);
+
+    -fx-text-fill: #10201C;
+    -fx-font-family: "Arial";
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+    -fx-padding: 10 26;
+
+    -fx-border-color: #3E5E57;
+    -fx-border-width: 1.6px;
+
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.28), 12, 0.22, 0, 3);
+    -fx-cursor: hand;
+}
+
+.button-return:hover {
+    -fx-background-color: linear-gradient(#8AA8A1, #789991);
+}
+
+.button-return:pressed {
+    -fx-translate-y: 1;
+}
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*.tab-pane {*/
-/*    -fx-border-color: red;*/
-/*    -fx-border-width: 3;*/
-/*}*/
-
-/*!* Mellanrum mellan flikarna: gäller TabPane med styleclass 'spaced-tabs' *!*/
-/*.tab-pane.spaced-tabs > .tab-header-area > .headers-region > .tab {*/
-/*    !* top  right bottom left *!*/
-/*    -fx-padding: 0 0 0 0;*/
-/*}*/
-
-/*.tab-pane.*/
-
-/*!* Centrera texten inne i varje flik *!*/
-/*.tab-pane.spaced-tabs > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {*/
-/*    -fx-alignment: CENTER;*/
-/*}*/
