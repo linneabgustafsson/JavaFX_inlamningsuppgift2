@@ -1,6 +1,8 @@
 package com.linnea.entity;
 
-public class RideOnLawnMower extends LawnMower {
+import java.io.Serializable;
+
+public class RideOnLawnMower extends LawnMower implements Serializable {
 
     public RideOnLawnMower()    {
     }
@@ -9,8 +11,4 @@ public class RideOnLawnMower extends LawnMower {
         super(price, brand, "åkgräsklippare", itemNumber, weight);
     }
 
-    @Override
-    public void instructionManual() {
-        System.out.println("🌿 MANUAL FÖR ÅKGRÄSKLIPPARE 🌿\nSätt dig på åkgräsklipparen och kör iväg.");
-    }
 }

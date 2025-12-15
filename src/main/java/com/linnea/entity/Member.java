@@ -1,8 +1,6 @@
 package com.linnea.entity;
 
 import com.linnea.Rental;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -16,8 +14,8 @@ public class Member implements Serializable {
     private String membershipLevel;
     private List<Rental> orderHistory = new ArrayList<>();
 
-//    //!!!!!!!!!!!!!!!!!!
-//    private final BooleanProperty NAMN = new SimpleBooleanProperty(false);
+    public Member() {
+    }
 
     public Member(String personalIdNumber, String firstName, String lastName, String membershipLevel) {
         this.personalIdNumber = personalIdNumber;
@@ -26,20 +24,9 @@ public class Member implements Serializable {
         this.membershipLevel = membershipLevel;
     }
 
-    public Member() {
+    public Member(List<Rental> orderHistory) {
+        this.orderHistory = new ArrayList<>(orderHistory);
     }
-
-//    //!!!!!!!!!!!!!!!!!!
-//    public boolean isActive() {
-//        return NAMN.get();
-//    }
-//    public BooleanProperty activeProperty() {
-//        return NAMN;
-//    }
-//    public void setActive(boolean value) {
-//        NAMN.set(value);
-//    }
-
 
     public String getPersonalIdNumber() {
         return personalIdNumber;
@@ -57,8 +44,8 @@ public class Member implements Serializable {
         return  membershipLevel;
     }
 
-    public List getOrderHistory()   {
-        return  orderHistory;
+    public List<Rental> getOrderHistory()   {
+        return orderHistory;
     }
 
     public void setPersonalIdNumber(String personalIdNumber) {
@@ -81,6 +68,12 @@ public class Member implements Serializable {
         this.orderHistory = orderHistory;
     }
 
+    //***SKA VÄL INTE VARA HÄR?*****
+    public void addRentalToHistory(Rental rental) {
+    orderHistory.add(rental);
+    }
+
+
     public String toString()    {
         return personalIdNumber + "\n" + firstName + "\n" + lastName + "\n" + membershipLevel + "";
     }
@@ -88,4 +81,6 @@ public class Member implements Serializable {
     public String toStringOrderHistory()    {
         return "Orderhistorik; " + orderHistory;
     }
+
+
 }

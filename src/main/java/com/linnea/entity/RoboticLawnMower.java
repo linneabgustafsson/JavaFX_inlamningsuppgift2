@@ -1,6 +1,8 @@
 package com.linnea.entity;
 
-public class RoboticLawnMower extends LawnMower {
+import java.io.Serializable;
+
+public class RoboticLawnMower extends LawnMower implements Serializable {
 
     private int lawnSize;
 
@@ -18,11 +20,6 @@ public class RoboticLawnMower extends LawnMower {
 
     public void setLawnSize(int lawnSize) {
         this.lawnSize = lawnSize;
-    }
-
-    @Override
-    public void instructionManual() {
-        System.out.println("🍀 MANUAL FÖR ROBOTGRÄSKLIPPARE 🍀\nFixa GPS-inställningarna och se till att klipparen hittar hem till sitt lilla hus.");
     }
 
     @Override

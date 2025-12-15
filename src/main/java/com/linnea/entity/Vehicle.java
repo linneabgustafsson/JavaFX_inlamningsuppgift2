@@ -1,8 +1,5 @@
 package com.linnea.entity;
 
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-
 import java.io.Serializable;
 
 public abstract class Vehicle implements Serializable {
@@ -11,22 +8,6 @@ public abstract class Vehicle implements Serializable {
     private String brand;
     private String vehicleType;
     private String itemNumber;
-
-    //!!!!!!!!!!!!!!!!!!VAD ÄR DETTA
-    private final BooleanProperty NAMN = new SimpleBooleanProperty(false);
-
-        //!!!!!!!!!!!!!!!!!!
-    public boolean isActive() {
-        return NAMN.get();
-    }
-    public BooleanProperty activeProperty() {
-        return NAMN;
-    }
-    public void setActive(boolean value) {
-        NAMN.set(value);
-    }
-    //------------------------------------
-
 
     public Vehicle() {
     }
@@ -69,8 +50,6 @@ public abstract class Vehicle implements Serializable {
     public void setItemNumber(String itemNumber) {
         this.itemNumber = itemNumber;
     }
-
-    public abstract void instructionManual();
 
     public String toString() {
         return "Fordonstyp: " + vehicleType + "\nMärke: " + brand + "\nPris: " + price + " kr/dag\nArtikelnummer: " + itemNumber + "\n";

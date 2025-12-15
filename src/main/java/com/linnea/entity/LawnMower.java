@@ -1,6 +1,8 @@
 package com.linnea.entity;
 
-public abstract class LawnMower extends Vehicle {
+import java.io.Serializable;
+
+public abstract class LawnMower extends Vehicle implements Serializable {
 
     private int weight;
 
