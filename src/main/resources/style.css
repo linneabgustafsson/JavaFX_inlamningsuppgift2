@@ -81,8 +81,7 @@
     -fx-faint-focus-color: transparent;
 }
 
-
-/**********Alertbox - ta bort medlem*************/
+/**********Alertbox - remove member*************/
 .remove-member-alert {
     -fx-background-color: #96ACA6;
 }
@@ -131,9 +130,7 @@
     -fx-translate-y: 1;
 }
 
-
-/****************NY**********************/
-
+/****************Ordinary Button**********************/
 .button-ordinary {
     -fx-background-color: linear-gradient(
         rgba(227,236,233,0.95),
@@ -171,6 +168,7 @@
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.16), 8, 0.16, 0, 1);
 }
 
+/****************Return to menu-button**********************/
 .button-return {
     -fx-background-color: linear-gradient(#7F9C95, #6F8F86);
 
@@ -198,6 +196,81 @@
 
 .button-return:pressed {
     -fx-translate-y: 1;
+}
+
+/****************TabPane**********************/
+
+.tab-pane {
+    -fx-tab-min-width: 130px;
+    -fx-tab-min-height: 40px;
+}
+
+.tab-pane .tab-header-area {
+    -fx-padding: 10 10 0 10;
+}
+
+.tab-pane .headers-region {
+    -fx-background-color: transparent;
+}
+
+.tab-pane .tab {
+    -fx-background-color: linear-gradient(
+        rgba(227,236,233,0.95),
+        rgba(198,212,207,0.90)
+    );
+
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+
+    -fx-border-color: rgba(79,111,102,0.55);
+    -fx-border-width: 1.3px;
+
+    -fx-padding: 8 22;
+
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.22), 11, 0.18, 0, 2);
+    -fx-cursor: hand;
+}
+
+.tab-pane .tab .tab-label {
+    -fx-text-fill: #1F2A26;
+    -fx-font-family: "Arial";
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.tab-pane .tab:hover {
+    -fx-background-color: linear-gradient(
+        rgba(238,245,243,0.98),
+        rgba(208,222,217,0.93)
+    );
+
+    -fx-border-color: rgba(79,111,102,0.75);
+
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.30), 13, 0.22, 0, 3);
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: linear-gradient(
+        rgba(210,230,225,1.0),
+        rgba(170,200,192,0.95)
+    );
+
+    -fx-border-color: #4F6F66;
+    -fx-border-width: 2;
+
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 14, 0.25, 0, 4);
+}
+
+.tab-pane .tab:pressed {
+    -fx-translate-y: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.16), 8, 0.16, 0, 1);
+}
+
+.tab-pane:focused,
+.tab-pane .tab:focused,
+.tab-pane .tab-header-area:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
 }
 
 

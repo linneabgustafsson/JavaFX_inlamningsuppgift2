@@ -24,6 +24,6 @@ public abstract class LawnMower extends Vehicle implements Serializable {
 
     @Override
     public String toString() {
-        return super.toString() + ". Vikt: " + weight + " kg.\n";
+        return super.toString() + "Vikt: " + weight + " kg\n";
     }
 }

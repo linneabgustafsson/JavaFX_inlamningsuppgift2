@@ -1,5 +1,4 @@
 package com.linnea;
-
 import com.linnea.entity.Vehicle;
 import com.linnea.entity.Member;
 
@@ -45,6 +44,6 @@ public class Rental implements Serializable {
     }
 
     public String toString()    {
-        return "Medlemmen som bokat: \n" + member + "\n\nDet uthyrda fordonet:\n " + vehicle + "\n\nAntal uthyrningsdagar: " + numberOfDays;
+        return member + "" + vehicle + "" + numberOfDays;
     }
 }

@@ -1,7 +1,6 @@
 package com.linnea.entity;
 
 import com.linnea.Rental;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,11 +67,9 @@ public class Member implements Serializable {
         this.orderHistory = orderHistory;
     }
 
-    //***SKA VÄL INTE VARA HÄR?*****
     public void addRentalToHistory(Rental rental) {
-    orderHistory.add(rental);
+        orderHistory.add(rental);
     }
-
 
     public String toString()    {
         return personalIdNumber + "\n" + firstName + "\n" + lastName + "\n" + membershipLevel + "";
@@ -81,6 +78,4 @@ public class Member implements Serializable {
     public String toStringOrderHistory()    {
         return "Orderhistorik; " + orderHistory;
     }
-
-
 }

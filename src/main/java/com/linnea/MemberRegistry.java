@@ -24,10 +24,9 @@ public class MemberRegistry {
         return membersObservableList;
     }
 
-    //INTE HA SETTER?
-//    public void setMembersObservableList(ObservableList<Member> membersObservableList) {
-//        this.membersObservableList = membersObservableList;
-//    }
+    public void setMembersObservableList(ObservableList<Member> membersObservableList) {
+        this.membersObservableList = membersObservableList;
+    }
 
     public String getFileMemberRegistry() {
         return fileMemberRegistry;
@@ -53,9 +52,9 @@ public class MemberRegistry {
 
     public void writeToFileMemberRegistry() {
 
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fileMemberRegistry, false))) {
+        try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(fileMemberRegistry, false))) {
 
-            out.writeObject(new ArrayList<>(membersObservableList));
+            objectOutputStream.writeObject(new ArrayList<>(membersObservableList));
         }
 
         catch (IOException e) {

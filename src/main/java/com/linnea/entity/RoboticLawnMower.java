@@ -24,6 +24,6 @@ public class RoboticLawnMower extends LawnMower implements Serializable {
 
     @Override
     public String toString() {
-        return super.toString() + "  Kapacitet: " + lawnSize + " m2.\n";
+        return super.toString() + " Kapacitet: " + lawnSize + " m2\n";
     }
 }

@@ -4,21 +4,21 @@ import com.linnea.entity.*;
 import com.linnea.service.MembershipService;
 import com.linnea.service.RentalService;
 import com.linnea.util.UIStyler;
+
 import javafx.application.Application;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
+import javafx.scene.text.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -37,33 +37,44 @@ public class Main extends Application {
     MembershipService membershipService;
     Inventory inventory;
     RentalService rentalService;
+    Rental rental;
 
     String memberRegistryFile;
     String inventoryListFile;
     String rentalListFile;
 
     int numberOfDays;
-    Vehicle vehicleInstansvariabel;
-    Member memberInstansvariabel;
+    Vehicle vehicle;
+    Member member;
 
     Label memberRemovedLabel = new Label();
-    TextFlow memberInfoIMedlemsregisterTextFlow = new TextFlow();
+    TextFlow memberInMemberRegistryTextFlow = new TextFlow();
 
     boolean openMemberRegistryFromBookWindow = false;
     boolean openMemberFormFromAddMemberWindow = false;
 
-    LocalDate fromDateInstansvariabel;
-    LocalDate toDateInstansvariabel;
+    boolean openVehicleRegistryFromBookWindow = false;
+    boolean openVehicleFormFromAddVehicleWindow = false;
 
-    int finalPriceInstansvariabel;
+    LocalDate fromDate;
+    LocalDate toDate;
 
-    public Rental rentalInstansvariabel;
+    int finalPrice;
 
-    Scene previousScene;
-    String previousHeadline;
+    Scene previousMemberScene;
+    String previousMemberHeadline;
+    Scene previousVehicleScene;
+    String previousVehicleHeadLine;
 
     ObservableList<Member> membersObservableList;
     TableView<Member> memberTableView;
+    Member chosenMemberInRegistryHighlight = null;
+    
+    ObservableList<Vehicle> inventoryObservableList;
+    Vehicle chosenVehicleInRegistryHighlight = null;
+
+    ObservableList<Rental> rentalsObservableList;
+    Rental chosenRentalInRegistryHighlight = null;
 
     @Override
     public void start(Stage stage) throws Exception {
@@ -86,9 +97,9 @@ public class Main extends Application {
 
         inventoryListFile = "inventoryListFile.ser";
         inventory = new Inventory(inventoryListFile);
-        inventory.readFromFileMemberRegistry(inventoryListFile);
+        inventory.readFromFileInventory(inventoryListFile);
 
-        if (inventory.getInventoryList().isEmpty()) {
+        if (inventory.getInventoryObservableList().isEmpty()) {
             inventory.initialValueInventoryList();
             inventory.writeToFileInventory();
         }
@@ -97,23 +108,23 @@ public class Main extends Application {
         rentalService = new RentalService(membershipService, inventory, rentalListFile);
         rentalService.readFromFileRentals(rentalListFile);
 
-        if (rentalService.getRentalList().isEmpty()) {
+        if (rentalService.getRentalsObservableList().isEmpty()) {
             rentalService.initialValueRentalList();
             rentalService.writeToFileRentals();
         }
 
         //************ORDERHISTORIK*******************
-        Member member1 = membershipService.searchMemberNY("Lars");
+        Member member1 = membershipService.findMember("Lars");
         Vehicle vehicle1 = inventory.findVehicleByItemNr("125");
         Rental rental1 = new Rental(vehicle1, 15, member1);
         member1.getOrderHistory().add(rental1);
 
-        Member member2 = membershipService.searchMemberNY("Eja");
+        Member member2 = membershipService.findMember("Eja");
         Vehicle vehicle2 = inventory.findVehicleByItemNr("250");
         Rental rental2 = new Rental(vehicle2, 20, member2);
         member2.getOrderHistory().add(rental2);
 
-        Member member3 = membershipService.searchMemberNY("Ulla");
+        Member member3 = membershipService.findMember("Ulla");
         Vehicle vehicle3 = inventory.findVehicleByItemNr("113");
         Rental rental3 = new Rental(vehicle3, 5, member3);
         member3.getOrderHistory().add(rental3);
@@ -123,12 +134,15 @@ public class Main extends Application {
         stage.setTitle("HUVUDMENY");
 
         Label headingLabel = new Label("SHARED VEHICLES");
-        headingLabel.setFont(Font.font("Helvetica Neue", FontWeight.BOLD, 26));
+        headingLabel.setFont(Font.font("Helvetica Neue", FontWeight.BOLD, 30));
         headingLabel.setStyle("-fx-text-fill: #3A5A50");
 
-        Label headingLabel2 = new Label("medlemsklubb med uthyrning av fordon");
-        headingLabel2.setFont(Font.font("Helvetica Neue", FontWeight.BOLD, 18));
+        Label headingLabel2 = new Label("uthyrning av fordon");
+        headingLabel2.setFont(Font.font("Helvetica Neue", FontWeight.BOLD, 22));
         headingLabel2.setStyle("-fx-text-fill: #3A5A50");
+
+        Label topLineLabel = new Label("─────────────────────────────────");
+        topLineLabel.setStyle("-fx-text-fill: #3A5A50");
 
         Label memberHandlingLabel = new Label("Hantera medlem");
         uiStyler.styleMainMenuLabels(memberHandlingLabel);
@@ -155,12 +169,18 @@ public class Main extends Application {
         Button addVehicleButton = new Button();
         addVehicleButton.setText("Lägg till fordon");
         uiStyler.styleDropdownMenuButton(addVehicleButton);
-        addVehicleButton.setOnAction(e -> addVehicleWindow(stage));
+        addVehicleButton.setOnAction(e -> {
+                openVehicleFormFromAddVehicleWindow = true;
+                addOrChangeVehicleWindow(stage);
+        });
 
         Button vehicleRegistryButton = new Button();
         vehicleRegistryButton.setText("Sök, ändra eller ta bort fordon");
         uiStyler.styleDropdownMenuButton(vehicleRegistryButton);
-        //vehicleRegistryButton.setOnAction(e -> vehicleRegistryWindow(stage));     //Ska gå till den gemensamma
+        vehicleRegistryButton.setOnAction(e -> {
+            openVehicleRegistryFromBookWindow = true;
+            vehicleRegistryFromMenu(stage);
+        });
 
         ComboBox <Button> vehicleComboBox = new ComboBox<>();
         vehicleComboBox.getItems().addAll(addVehicleButton, vehicleRegistryButton);
@@ -174,17 +194,12 @@ public class Main extends Application {
         bookRentalButton.setOnAction(e -> bookRentalsWindow(stage));
 
         Button ongoingRentalsButton = new Button();
-        ongoingRentalsButton.setText("Pågående uthyrningar");
+        ongoingRentalsButton.setText("Se uthyrningar/återlämna fordon");
         uiStyler.styleDropdownMenuButton(ongoingRentalsButton);
-        ongoingRentalsButton.setOnAction(e -> ongoingRentalWindow(stage));
-
-        Button returnVehicleButton = new Button();
-        returnVehicleButton.setText("Återlämna fordon");
-        uiStyler.styleDropdownMenuButton(returnVehicleButton);
-        returnVehicleButton.setOnAction(e -> returnVehicleWindow(stage));
+        ongoingRentalsButton.setOnAction(e -> ongoingAndReturnRentalWindow(stage));
 
         ComboBox<Button> rentalComboBox = new ComboBox<>();
-        rentalComboBox.getItems().addAll(bookRentalButton, ongoingRentalsButton, returnVehicleButton);
+        rentalComboBox.getItems().addAll(bookRentalButton, ongoingRentalsButton);
 
         Label economyLabel = new Label("Hantera ekonomi");
         uiStyler.styleMainMenuLabels(economyLabel);
@@ -207,6 +222,7 @@ public class Main extends Application {
         gridPane.setAlignment(Pos.TOP_CENTER);
         gridPane.add(headingLabel, 0, 0);
         gridPane.add(headingLabel2, 0, 1);
+        gridPane.add(topLineLabel, 0, 3);
         gridPane.add(memberHandlingLabel, 0, 5);
         gridPane.add(memberComboBox, 0, 6);
         gridPane.add(vehicleHandlingLabel, 0, 9);
@@ -235,31 +251,29 @@ public class Main extends Application {
         stage.show();
     }
 
-    //***********MEDLEM*********
+    //***********MEMBER*********
     public void addOrChangeMemberWindow(Stage stage) {
 
         stage.setTitle("MEDLEMSFORMULÄR");
-
         Label headingLabel;
 
         if (openMemberFormFromAddMemberWindow == false) {
             headingLabel = new Label("Lägg till medlem");
         }
-
         else {
            headingLabel = new Label("Ändra uppgifter om medlem");
         }
 
         uiStyler.styleHeadingLabel(headingLabel);
 
-        Label personalIdNrLabel = new Label("Personnummer (ÅÅMMDD-XXXX) ");
-        personalIdNrLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        Label personalIdNrLabel = new Label("Personnummer (ÅÅMMDD-XXXX)");
+        uiStyler.styleLabelinForm(personalIdNrLabel);
         Label firstNameLabel = new Label("Förnamn ");
-        firstNameLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        uiStyler.styleLabelinForm(firstNameLabel);
         Label lastNameLabel = new Label("Efternamn ");
-        lastNameLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        uiStyler.styleLabelinForm(lastNameLabel);
         Label membershipLevelLabel = new Label("Medlemsnivå (student, standard, premium) ");
-        membershipLevelLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        uiStyler.styleLabelinForm(membershipLevelLabel);
 
         TextField personalIdNrField = new TextField();
         TextField firstNameField = new TextField();
@@ -268,12 +282,11 @@ public class Main extends Application {
 
         if (openMemberFormFromAddMemberWindow == false) {
         }
-
         else {
-            personalIdNrField.setText(memberInstansvariabel.getPersonalIdNumber());
-            firstNameField.setText(memberInstansvariabel.getFirstName());
-            lastNameField.setText(memberInstansvariabel.getLastName());
-            membershipLevelField.setText(memberInstansvariabel.getMembershipLevel());
+            personalIdNrField.setText(member.getPersonalIdNumber());
+            firstNameField.setText(member.getFirstName());
+            lastNameField.setText(member.getLastName());
+            membershipLevelField.setText(member.getMembershipLevel());
         }
 
         Label savedStatusLabel = new Label();
@@ -323,7 +336,7 @@ public class Main extends Application {
             }
             membershipLevelField.setStyle("-fx-border-color: #000000; -fx-border-width: 0;");
 
-            //**************EJ KLAR - MEN FUNKAR I KONSOLEN
+            //Ej klar, ses endast i konsolen
             if (membershipLevelField.getText().equalsIgnoreCase("student") ||
                 membershipLevelField.getText().equalsIgnoreCase("premium")  ||
                 membershipLevelField.getText().equals("standard")) {
@@ -338,8 +351,7 @@ public class Main extends Application {
                System.out.println("Om fel medlemsnivå");
             }
 
-            //**************FELHANTERING FÖR OM PNR-INPUT ÄR FEL******************
-           //Säkerställer inte rätt format men iaf rätt antal tecken...
+           //Ej klar, ses endast i konsolen
             String characters = personalIdNrField.getText();
             characters.length();
             int countCharacters = characters.length();
@@ -348,7 +360,6 @@ public class Main extends Application {
             if (countCharacters < 11 || countCharacters > 11) {
                 System.out.println("För få eller för många tecken");
             }
-
 
             if (openMemberFormFromAddMemberWindow == false) {
                 Member member = new Member(
@@ -362,11 +373,11 @@ public class Main extends Application {
             }
 
             else {
-                memberInstansvariabel.setPersonalIdNumber(personalIdNrField.getText());
-                memberInstansvariabel.setFirstName(firstNameField.getText());
-                memberInstansvariabel.setLastName(lastNameField.getText());
-                memberInstansvariabel.setMembershipLevel(membershipLevelField.getText());
-                printMemberInfo(memberInstansvariabel, infoAboutMemberTextFlow);
+                member.setPersonalIdNumber(personalIdNrField.getText());
+                member.setFirstName(firstNameField.getText());
+                member.setLastName(lastNameField.getText());
+                member.setMembershipLevel(membershipLevelField.getText());
+                printMemberInfo(member, infoAboutMemberTextFlow);
             }
 
             savedStatusLabel.setStyle("-fx-text-fill: #4F6F66");
@@ -410,8 +421,8 @@ public class Main extends Application {
             Button backToMemberRegistry = new Button("Klar");
             uiStyler.styleOrdinaryButton(backToMemberRegistry);
             backToMemberRegistry.setOnAction(e -> {
-                stage.setScene(previousScene);
-                stage.setTitle(previousHeadline);
+                stage.setScene(previousMemberScene);
+                stage.setTitle(previousMemberHeadline);
             });
 
             hBox.getChildren().addAll(backToMemberRegistry);
@@ -426,7 +437,7 @@ public class Main extends Application {
         stage.show();
     }
 
-    public HBox memberRegistryGEMENSAM(Stage memberRegistryStage)   {
+    public HBox memberRegistryTableView(Stage stage)   {
 
         BorderPane borderPane = new BorderPane();
         borderPane.setStyle("-fx-background-color: #96ACA6;");
@@ -435,10 +446,27 @@ public class Main extends Application {
         uiStyler.styleHeadingLabel(headingLabel);
 
         memberTableView = new TableView<>();
-        memberTableView.setEditable(true);                                              //???????????
-        memberTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);     //Eventuellt
+        memberTableView.setEditable(true);
+        memberTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         memberTableView.setId("customTable");
         memberTableView.getStylesheets().add("style.css");
+
+        memberTableView.setRowFactory(tv -> new TableRow<Member>() {
+            @Override
+            protected void updateItem(Member item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty || item == null) {
+                    setStyle("");
+                }
+                else if (item == chosenMemberInRegistryHighlight) {
+                    setStyle("-fx-background-color: #82a9a1;");
+                }
+                else {
+                    setStyle("");
+                }
+            }
+        });
 
         TableColumn<Member, String> firstNameColumn = new TableColumn<>("Förnamn");
         firstNameColumn.setCellValueFactory(new PropertyValueFactory<>("firstName"));
@@ -463,7 +491,7 @@ public class Main extends Application {
         searchButton.setOnAction(e -> {
 
             String userInput = searchTextField.getText();
-            Member foundMember = membershipService.searchMemberNY(userInput);
+            Member foundMember = membershipService.findMember(userInput);
 
             if (searchTextField.getText().equals("")) {
                 searchTextField.setStyle("-fx-border-color: #C0392B; -fx-border-width: 2;");
@@ -481,8 +509,10 @@ public class Main extends Application {
                 searchTextField.setStyle("-fx-border-color: #000000; -fx-border-width: 0;");
 
                 int index = memberTableView.getItems().indexOf(foundMember);
-                memberTableView.getSelectionModel().select(index);
                 memberTableView.scrollTo(index);
+
+                chosenMemberInRegistryHighlight = foundMember;
+                memberTableView.refresh();
             }
         });
 
@@ -504,9 +534,7 @@ public class Main extends Application {
             {
                 orderHistoryHBox.setAlignment(Pos.CENTER);
                 orderHistoryHBox.getChildren().addAll(orderHistoryButton);
-
-                //Öppna orderhistorik i SAMMA stage
-                orderHistoryButton.setOnAction(e -> orderHistoryWindow(memberRegistryStage));
+                orderHistoryButton.setOnAction(e -> orderHistoryWindow(stage));
             }
 
             @Override
@@ -526,8 +554,8 @@ public class Main extends Application {
         headLineChosenMember.setFont(Font.font("Arial", FontWeight.BOLD, 18));
         headLineChosenMember.setFill(Color.web("#4F6F66"));
 
-        memberInfoIMedlemsregisterTextFlow.getChildren().clear();
-        memberInfoIMedlemsregisterTextFlow.getChildren().add(headLineChosenMember);
+        memberInMemberRegistryTextFlow.getChildren().clear();
+        memberInMemberRegistryTextFlow.getChildren().add(headLineChosenMember);
 
         TableColumn<Member, Void> selectMemberColumn = new TableColumn<>("Välj medlem");
         selectMemberColumn.setCellFactory(col -> new TableCell<Member, Void>() {
@@ -543,12 +571,14 @@ public class Main extends Application {
                     memberRemovedLabel.setText("");
 
                     Member selectedMember = getTableView().getItems().get(getIndex());
-                    memberInstansvariabel = selectedMember;
+                    member = selectedMember;
+                    chosenMemberInRegistryHighlight = selectedMember;
+                    memberTableView.refresh();
 
                     headLineChosenMember.setText("Vald medlem\n");
-                    memberInfoIMedlemsregisterTextFlow.getChildren().setAll(headLineChosenMember);
+                    memberInMemberRegistryTextFlow.getChildren().setAll(headLineChosenMember);
 
-                   printMemberInfo(selectedMember, memberInfoIMedlemsregisterTextFlow);
+                   printMemberInfo(selectedMember, memberInMemberRegistryTextFlow);
                 });
             }
 
@@ -568,11 +598,7 @@ public class Main extends Application {
         memberTableView.getColumns().addAll(firstNameColumn, lastNameColumn,
                 personalIdNumberColumn, membershipLevelColumn, orderHistoryColumn, selectMemberColumn);
 
-        memberTableView.setStyle(
-                "-fx-border-color: black;" +
-                        "-fx-border-width: 1;"
-        );
-
+        memberTableView.setStyle("-fx-border-color: black;" + "-fx-border-width: 1;");
         membersObservableList = memberRegistry.getMembersObservableList();
         memberTableView.setItems(membersObservableList);
 
@@ -583,7 +609,7 @@ public class Main extends Application {
         bottomHBox.setPrefHeight(200);
         bottomHBox.setMinHeight(Region.USE_PREF_SIZE);
         bottomHBox.setMaxHeight(Region.USE_PREF_SIZE);
-        bottomHBox.getChildren().addAll(memberInfoIMedlemsregisterTextFlow);
+        bottomHBox.getChildren().addAll(memberInMemberRegistryTextFlow);
 
         borderPane.setTop(onTopVBox);
         BorderPane.setMargin(onTopHBox, new Insets(10));
@@ -591,7 +617,7 @@ public class Main extends Application {
         borderPane.setBottom(bottomHBox);
 
         Scene scene = new Scene(borderPane, 800, 750);
-        memberRegistryStage.setScene(scene);
+        stage.setScene(scene);
 
         return bottomHBox;
     }
@@ -602,7 +628,7 @@ public class Main extends Application {
         memberRemovedLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
 
         bottomHBox.getChildren().clear();
-        bottomHBox.getChildren().add(memberInfoIMedlemsregisterTextFlow);
+        bottomHBox.getChildren().add(memberInMemberRegistryTextFlow);
 
         if (openMemberRegistryFromBookWindow) {
 
@@ -620,34 +646,21 @@ public class Main extends Application {
             uiStyler.styleOrdinaryButton(deleteButton);
             deleteButton.setOnAction(e -> {
 
-                if (memberInstansvariabel == null) {
+                if (member == null) {
                 }
 
                 else {
 
-                    Alert confirmationAlert = new Alert(Alert.AlertType.WARNING);
-                    confirmationAlert.setTitle("BORTTAG AV MEDLEM");
-                    confirmationAlert.setHeaderText("Är du säker på att du vill ta bort medlemmen?");
-                    confirmationAlert.getDialogPane().getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
-                    confirmationAlert.getDialogPane().getStyleClass().add("remove-member-alert");
-                    confirmationAlert.getButtonTypes().clear();
+                    String title = "BORTTAG AV MEDLEM";
+                    String header = "Är du säker på att du vill ta bort medlemmen?";
+                    boolean removeMember = confirmRemovalAlertWindow(title, header);
 
-                    ButtonType okButton = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
-                    ButtonType cancelButton = new ButtonType("Avbryt", ButtonBar.ButtonData.CANCEL_CLOSE);
-                    confirmationAlert.getButtonTypes().setAll(okButton, cancelButton);
+                    if (removeMember == true) {
 
-                    Optional<ButtonType> userChoice = confirmationAlert.showAndWait();
-
-                    if (userChoice.isPresent() && userChoice.get() == okButton) {
-
-                        memberRegistry.removeMemberFromRegistry(memberInstansvariabel);
-                        memberInfoIMedlemsregisterTextFlow.getChildren().clear();
-
-                        memberRemovedLabel.setText(
-                                memberInstansvariabel.getFirstName() + " " +
-                                        memberInstansvariabel.getLastName() +
-                                        "\när borttagen\nfrån registret"
-                        );
+                        memberRegistry.removeMemberFromRegistry(member);
+                        memberInMemberRegistryTextFlow.getChildren().clear();
+                        memberRemovedLabel.setText(member.getFirstName() + " " +
+                                member.getLastName() + "\när borttagen\nfrån registret");
                     }
                 }
             });
@@ -656,17 +669,16 @@ public class Main extends Application {
             uiStyler.styleOrdinaryButton(changeButton);
             changeButton.setOnAction(e -> {
 
-                if (memberInstansvariabel == null) {
+                if (member == null) {
                 }
 
                 else {
                     memberTableView.refresh();
-                    previousScene = stage.getScene();
-                    previousHeadline = stage.getTitle();
+                    previousMemberScene = stage.getScene();
+                    previousMemberHeadline = stage.getTitle();
                     openMemberFormFromAddMemberWindow = true;
                     addOrChangeMemberWindow(stage);
                 }
-
             });
 
             Button returnToMenuButton = uiStyler.styleReturnToMenuButton();
@@ -701,7 +713,7 @@ public class Main extends Application {
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.setTitle("MEDLEMSREGISTER");
 
-        HBox hBox = memberRegistryGEMENSAM(stage);
+        HBox hBox = memberRegistryTableView(stage);
         hBox.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
 
         bottomMemberRegistry(stage, hBox);
@@ -709,7 +721,6 @@ public class Main extends Application {
     }
 
     public void orderHistoryWindow(Stage stage) {
-
         stage.setTitle("ORDERHISTORIK");
 
         BorderPane borderPane = new BorderPane();
@@ -727,26 +738,23 @@ public class Main extends Application {
         topVBox.setAlignment(Pos.CENTER);
         topVBox.setPadding(new Insets(20, 10, 30, 10));
 
-        if (memberInstansvariabel == null) {
-            //headingLabelName.setText("Du måste klicka på knappen Välj först");
+        if (member == null) {
             topVBox.getChildren().addAll(headingLabel, headingLabelName);
-
-            borderPane.setTop(topVBox);
 
             Label infoLabel = new Label("Ingen medlem vald");
             infoLabel.setAlignment(Pos.CENTER);
+            borderPane.setTop(topVBox);
             borderPane.setCenter(infoLabel);
         }
 
         else {
-
-            headingLabelName.setText(memberInstansvariabel.getFirstName() +
-                    " " + memberInstansvariabel.getLastName());
+            headingLabelName.setText(member.getFirstName() +
+                    " " + member.getLastName());
 
             topVBox.getChildren().addAll(headingLabel, headingLabelName);
             borderPane.setTop(topVBox);
 
-            List<Rental> orderHistory = memberInstansvariabel.getOrderHistory();
+            List<Rental> orderHistory = member.getOrderHistory();
 
             TableView<Rental> orderHistoryTableView = new TableView<>();
             orderHistoryTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -772,14 +780,7 @@ public class Main extends Application {
             TableColumn<Rental, String> daysColumn = new TableColumn<>("Antal dagar");
             daysColumn.setCellValueFactory(new PropertyValueFactory<>("numberOfDays"));
 
-//            TableColumn<Rental, String> startDateColumn = new TableColumn<>("Startdatum");
-//            startDateColumn.setCellValueFactory(new PropertyValueFactory<>("startDate"));
-//
-//            TableColumn<Rental, String> endDateColumn = new TableColumn<>("Slutdatum");
-//            endDateColumn.setCellValueFactory(new PropertyValueFactory<>("endDate"));
-
-            orderHistoryTableView.getColumns().addAll(
-                    vehicleTypeColumn, vehiclePriceColumn, vehicleBrandColumn,
+            orderHistoryTableView.getColumns().addAll(vehicleTypeColumn, vehiclePriceColumn, vehicleBrandColumn,
                     vehicleItemNrColumn, daysColumn);
 
             ObservableList<Rental> orderHistoryObservableList = FXCollections.observableArrayList(orderHistory);
@@ -792,10 +793,9 @@ public class Main extends Application {
         closeWindowButton.getStylesheets().add("style.css");
         uiStyler.styleOrdinaryButton(closeWindowButton);
         closeWindowButton.setOnAction(e -> {
-
             stage.setTitle("MEDLEMSREGISTER");
 
-            HBox bottomHBox = memberRegistryGEMENSAM(stage);
+            HBox bottomHBox = memberRegistryTableView(stage);
             bottomHBox.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
 
             bottomMemberRegistry(stage, bottomHBox);
@@ -813,7 +813,7 @@ public class Main extends Application {
         borderPane.setBottom(bottomHBox);
 
         Scene scene = new Scene(borderPane, 800, 750);
-        stage.setScene(scene);   //samma Stage, ny vy
+        stage.setScene(scene);
     }
 
     public void memberRegistryBook()  {
@@ -824,208 +824,656 @@ public class Main extends Application {
 
         openMemberRegistryFromBookWindow = true;
 
-        HBox bookHBox = memberRegistryGEMENSAM(stage);
+        HBox bookHBox = memberRegistryTableView(stage);
         bookHBox.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
-
-//        Button valdMedlemKlarButton = new Button("Klar");
-//        createStuff.createButtonVanlig(valdMedlemKlarButton);
-//        valdMedlemKlarButton.setOnAction(e -> stage.close());
-            //*******INUTI DENNA ACTIONEVENT*********
-            //   - Felhantering, "Du har inte valt medlem"
-           //valdMedlemKlarButton.setDisable(true);
-           //valdMedlemKlarButton.setDisable(false);
 
         bottomMemberRegistry(stage, bookHBox);
         stage.showAndWait();
     }
 
-    //********FORDON**************
-    public void addVehicleWindow(Stage stage) {
-        stage.setTitle("LÄGG TILL FORDON ");
+    //********VEHICLE**************
+    public void addOrChangeVehicleWindow(Stage stage) {
 
-        Label headingLabel = new Label("Lägga till fordon");
+        stage.setTitle("FORDONSFORMULÄR");
+
+        Label headingLabel = new Label("Lägg till fordon");
         uiStyler.styleHeadingLabel(headingLabel);
 
-        //Om felhantering.
-        //- Inte kunna använda ta samma artikelnr igen.
-        //Jämför mot vilka artikelnr som finns, loopa igenom
-        //Om userInputItemNr == itemNumber "Finns redan, välj nytt."
 
-        Button returnToMenuButton = uiStyler.styleReturnToMenuButton();
-        returnToMenuButton.setOnAction(e -> mainMenuWindow(stage));
+        if (openVehicleRegistryFromBookWindow == false) {
+            headingLabel.setText("Lägg till fordon");
+        }
 
-        HBox hBox = new HBox();
-        hBox.getChildren().addAll(returnToMenuButton);
+        else {
+            headingLabel.setText("Ändra fordon");
+        }
 
-        BorderPane borderPane = new BorderPane();
-        borderPane.setTop(headingLabel);
+        Label priceLabel = new Label("Pris (kr/dag)");
+        uiStyler.styleLabelinForm(priceLabel);
+        TextField priceTextField = new TextField();
+        uiStyler.styleTextFieldinForm(priceTextField);
 
-        Scene scene = uiStyler.styleWindow(hBox, borderPane);
+        Label brandLabel = new Label("Märke");
+        uiStyler.styleLabelinForm(brandLabel);
+        TextField brandTextField = new TextField();
+        uiStyler.styleTextFieldinForm(brandTextField);
+
+        Label itemNumberLabel = new Label("Artikelnummer");
+        uiStyler.styleLabelinForm(itemNumberLabel);
+        TextField itemNumberTextField = new TextField();
+        uiStyler.styleTextFieldinForm(itemNumberTextField);
+
+        Label choseVehicleTypeLabel = new Label("Välj fordonstyp");
+        uiStyler.styleLabelinForm(choseVehicleTypeLabel);
+
+        Button trailerButton = new Button("Släpvagn");
+        uiStyler.styledropdownMenuButtoninForm(trailerButton);
+        Button rideOnLawnMowerButton = new Button("Åkgräsklippare");
+        uiStyler.styledropdownMenuButtoninForm(rideOnLawnMowerButton);
+        Button roboticLawnMowerButton = new Button("Robotgräsklippare");
+        uiStyler.styledropdownMenuButtoninForm(roboticLawnMowerButton);
+
+        ComboBox <Button> choseVehicleTypeComboBox = new ComboBox<>();
+        choseVehicleTypeComboBox.getItems().addAll(trailerButton, rideOnLawnMowerButton, roboticLawnMowerButton);
+
+        Label chosenVehicleTypeinDropDown = new Label("");
+        chosenVehicleTypeinDropDown.setFont(Font.font("Arial", FontWeight.BOLD, FontPosture.ITALIC, 14));
+        chosenVehicleTypeinDropDown.setStyle("-fx-background-color: #508f83");
+
+        Label wrongInputMessage = new Label("");
+        wrongInputMessage.setStyle("-fx-text-fill: #C0392B");
+        wrongInputMessage.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+
+        VBox sharedTopVBox = new VBox();
+        sharedTopVBox.setSpacing(10);
+        VBox.setMargin(headingLabel, new Insets(30, 0, 0, 0));
+        VBox.setMargin(priceLabel, new Insets(30, 0, 0, 0));
+        sharedTopVBox.setAlignment(Pos.TOP_CENTER);
+        sharedTopVBox.getChildren().addAll(headingLabel, priceLabel, priceTextField, brandLabel, brandTextField,
+                itemNumberLabel, itemNumberTextField, choseVehicleTypeLabel, choseVehicleTypeComboBox,chosenVehicleTypeinDropDown);
+
+        Text vehicleIsSavedText = new Text("");
+        vehicleIsSavedText.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        vehicleIsSavedText.setFill(Color.web("#4F6F66"));
+
+        TextFlow printInfoSavedVehicleTextFlow = new TextFlow();
+        printInfoSavedVehicleTextFlow.setTextAlignment(TextAlignment.CENTER);
+        printInfoSavedVehicleTextFlow.getChildren().addAll(vehicleIsSavedText);
+
+        Button saveButton = new Button("Spara");
+        uiStyler.styleOrdinaryButton(saveButton);
+
+        VBox middleVBox = new VBox();
+        middleVBox.setSpacing(10);
+        middleVBox.setAlignment(Pos.TOP_CENTER);
+        middleVBox.getChildren().addAll(saveButton);
+
+        Label lengthLabel = new Label("");
+        uiStyler.styleLabelinForm(lengthLabel);
+        TextField lengthTextField = new TextField();
+        uiStyler.styleTextFieldinForm(lengthTextField);
+
+        Label widthLabel = new Label("");
+        uiStyler.styleLabelinForm(widthLabel);
+        TextField widthTextField = new TextField();
+        uiStyler.styleTextFieldinForm(widthTextField);
+
+        trailerButton.setOnAction(e -> {
+
+            middleVBox.getChildren().clear();
+
+            chosenVehicleTypeinDropDown.setText("släpvagn");
+            lengthLabel.setText("Längd (i cm)");
+            widthLabel.setText("Bredd (i cm)");
+
+            VBox.setMargin(chosenVehicleTypeinDropDown, new Insets(10, 0, 5, 0));
+            middleVBox.getChildren().addAll(chosenVehicleTypeinDropDown, lengthLabel,
+                    lengthTextField, widthLabel, widthTextField, wrongInputMessage);
+        });
+
+        Label weightLabel = new Label("");
+        uiStyler.styleLabelinForm(weightLabel);
+        TextField weightTextField = new TextField();
+        uiStyler.styleTextFieldinForm(weightTextField);
+
+        rideOnLawnMowerButton.setOnAction(e -> {
+            middleVBox.getChildren().clear();
+            chosenVehicleTypeinDropDown.setText("åkgräsklippare");
+            weightLabel.setText("vikt (i kg)");
+
+            VBox.setMargin(chosenVehicleTypeinDropDown, new Insets(10, 0, 5, 0));
+            middleVBox.getChildren().addAll(chosenVehicleTypeinDropDown, weightLabel, weightTextField, wrongInputMessage);
+        });
+
+        Label lawnSizeLabel = new Label("");
+        uiStyler.styleLabelinForm(lawnSizeLabel);
+        TextField lawnSizeTextField = new TextField();
+        uiStyler.styleTextFieldinForm(lawnSizeTextField);
+
+        roboticLawnMowerButton.setOnAction(e -> {
+            middleVBox.getChildren().clear();
+            chosenVehicleTypeinDropDown.setText("robotgräsklippare");
+            weightLabel.setText("vikt (i kg)");
+            lawnSizeLabel.setText("kapacitet (i m2)");
+
+           VBox.setMargin(chosenVehicleTypeinDropDown, new Insets(10, 0, 5, 0));
+           middleVBox.getChildren().addAll(chosenVehicleTypeinDropDown, weightLabel, weightTextField, lawnSizeLabel,
+                   lawnSizeTextField, wrongInputMessage);
+        });
+
+          if (openVehicleRegistryFromBookWindow == true){
+                String priceString = String.valueOf(vehicle.getPrice());
+                priceTextField.setText(priceString);
+                brandTextField.setText(vehicle.getBrand());
+                itemNumberTextField.setText(vehicle.getItemNumber());
+            }
+
+        saveButton.setOnAction(e-> {
+
+            String vehicleTypeString = chosenVehicleTypeinDropDown.getText();
+            boolean vehicleInputIsCorrect = validateAndSaveVehicle(priceTextField, brandTextField, vehicleTypeString,
+                    itemNumberTextField, lengthTextField, widthTextField, weightTextField,
+                    lawnSizeTextField, wrongInputMessage);
+
+            if (vehicleInputIsCorrect==true) {
+                vehicleIsSavedText.setText("\nSparade uppgifter\n");
+                printVehicleInfo(vehicle, printInfoSavedVehicleTextFlow);
+
+                priceTextField.clear();
+                brandTextField.clear();
+                itemNumberTextField.clear();
+                lengthTextField.clear();
+                widthTextField.clear();
+                weightTextField.clear();
+                lawnSizeTextField.clear();
+                chosenVehicleTypeinDropDown.setText("");
+                wrongInputMessage.setText("");
+            }
+        });
+
+        VBox bottomVBox = new VBox();
+        bottomVBox.setSpacing(0);
+        bottomVBox.setAlignment(Pos.TOP_CENTER);
+        bottomVBox.getChildren().addAll(saveButton, printInfoSavedVehicleTextFlow);
+
+        HBox bottomHBox = new HBox();
+
+        if (openVehicleFormFromAddVehicleWindow == true)   {
+             Button returnToMenuButton = uiStyler.styleReturnToMenuButton();
+             bottomHBox.getChildren().addAll(returnToMenuButton);
+             returnToMenuButton.setOnAction(e -> mainMenuWindow(stage));
+        }
+
+        else    {
+            Button chosenVehicleReadyButton = new Button("Klar");
+            uiStyler.styleOrdinaryButton(chosenVehicleReadyButton);
+            bottomHBox.getChildren().addAll(chosenVehicleReadyButton);
+
+            chosenVehicleReadyButton.setOnAction(e -> {
+                stage.setScene(previousVehicleScene);
+                stage.setTitle(previousVehicleHeadLine);
+
+            });
+        }
+
+        BorderPane bottomBorderPane = new BorderPane();
+        bottomBorderPane.setCenter(middleVBox);
+        bottomBorderPane.setBottom(bottomVBox);
+
+        BorderPane mainBorderPane = new BorderPane();
+        mainBorderPane.setTop(sharedTopVBox);
+        mainBorderPane.setCenter(bottomBorderPane);
+        mainBorderPane.setBottom(bottomHBox);
+
+        Scene scene = uiStyler.styleWindow(bottomHBox, mainBorderPane);
         stage.setScene(scene);
         stage.show();
     }
 
-    public void vehicleRegistryGEMENSAM(Stage stage) {
+    public boolean validateAndSaveVehicle(TextField priceTextField, TextField brandTextField,
+                                          String vehicleType, TextField itemNumberTextField, TextField lengthTextField,
+                                          TextField widthTextField, TextField weightTextField, TextField lawnSizeTextField,
+                                          Label wrongInputMessage)    {
 
-        Stage vehicleRegistryStage = new Stage();
-        vehicleRegistryStage.initModality(Modality.APPLICATION_MODAL);      //Detta hindrar klick i huvudfönstret
-        vehicleRegistryStage.setTitle("FORDONSREGISTER ");
+        try {
+
+            int price = Integer.parseInt(priceTextField.getText().trim());
+
+            if (vehicleType.equals("släpvagn")) {
+
+                int length = Integer.parseInt(lengthTextField.getText().trim());
+                int width = Integer.parseInt(widthTextField.getText().trim());
+
+                if (openVehicleFormFromAddVehicleWindow == true) {
+
+                    vehicle.setPrice(price);
+                    vehicle.setBrand(brandTextField.getText());
+                    vehicle.setVehicleType(vehicleType);
+                    vehicle.setItemNumber(itemNumberTextField.getText());
+                }
+                else    {
+                    vehicle = new Trailer(price, brandTextField.getText().trim(),
+                            itemNumberTextField.getText().trim(), length, width);
+                    inventory.addVehicle(vehicle);
+                }
+            }
+
+            else if (vehicleType.equals("åkgräsklippare")) {
+
+                int weight = Integer.parseInt(weightTextField.getText().trim());
+
+                if (openVehicleFormFromAddVehicleWindow == true) {
+                    vehicle.setPrice(price);
+                    vehicle.setBrand(brandTextField.getText());
+                    vehicle.setVehicleType(vehicleType);
+                    vehicle.setItemNumber(itemNumberTextField.getText());
+                }
+                else {
+                    vehicle = new RideOnLawnMower(price, brandTextField.getText().trim(),
+                            itemNumberTextField.getText().trim(), weight);
+                    inventory.addVehicle(vehicle);
+                }
+            }
+
+            else if (vehicleType.equals("robotgräsklippare")) {
+
+                int weight = Integer.parseInt(weightTextField.getText().trim());
+                int lawnSize = Integer.parseInt(lawnSizeTextField.getText().trim());
+
+                if (openVehicleFormFromAddVehicleWindow == true) {
+                    vehicle.setPrice(price);
+                    vehicle.setBrand(brandTextField.getText());
+                    vehicle.setVehicleType(vehicleType);
+                    vehicle.setItemNumber(itemNumberTextField.getText());
+                }
+                else {
+                    vehicle = new RoboticLawnMower(price, brandTextField.getText().trim(),
+                            itemNumberTextField.getText().trim(), weight, lawnSize);
+                        inventory.addVehicle(vehicle);
+                }
+            }
+
+            return true;
+        }
+
+        catch (NumberFormatException e) {
+            wrongInputMessage.setText("\nPris, längd, bredd och m2 ska anges i heltal");
+            return false;
+        }
+    }
+
+    public void vehicleRegistryFromMenu(Stage stage) {
+        openVehicleRegistryFromBookWindow = true;
+        vehicleRegistryTableView(stage);
+        stage.show();
+    }
+
+     public void vehicleRegistryTableView(Stage stage) {
+
+        stage.setTitle("FORDONSREGISTER");
 
         Label headingLabel = new Label("Alla fordon");
         uiStyler.styleHeadingLabel(headingLabel);
 
-        //************TRAILERS************
-        TableView<Trailer> trailersTableView = new TableView();      //Metod som fixar?
-        trailersTableView.setEditable(false);                         //VAD GÖR DENNA
-        trailersTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        Text headLineChosenVehicle = new Text("Inget fordon valt");
+        headLineChosenVehicle.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        headLineChosenVehicle.setFill(Color.web("#4F6F66"));
 
-        VBox vBoxTrailer = new VBox();
-        vBoxTrailer.getChildren().addAll(trailersTableView);
-        vBoxTrailer.setPadding(new Insets(10, 10, 0, 10));
+        TextFlow printVehicleInfoTextFlow = new TextFlow();
+        printVehicleInfoTextFlow.getChildren().add(headLineChosenVehicle);
 
-        TableColumn<Trailer, String> brandColumn = new TableColumn("Märke");
-        brandColumn.setCellValueFactory(new PropertyValueFactory<>("brand"));
+        inventoryObservableList = inventory.getInventoryObservableList();
+        ObservableList<Vehicle> trailers = inventoryObservableList.filtered(v -> v instanceof Trailer);
+        ObservableList<Vehicle> roboticLawnMowers = inventoryObservableList.filtered(v -> v instanceof RoboticLawnMower);
+        ObservableList<Vehicle> rideOnLawnMowers = inventoryObservableList.filtered(v -> v instanceof RideOnLawnMower);
 
-        TableColumn<Trailer, Number> priceColumn = new TableColumn("Pris (kr/dag)");
-        priceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
+        TableView<Vehicle> allVehicleTableView = new TableView<>();
+        allVehicleTableView.setEditable(true);
+        allVehicleTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        allVehicleTableView.setId("customTable");
 
-        TableColumn<Trailer, Number> lengthColumn = new TableColumn("Längd (cm)");
-        lengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
+        TableColumn<Vehicle, String> vehicleTypeColumn1 = new TableColumn<>("Fordonstyp");
+        vehicleTypeColumn1.setCellValueFactory(new PropertyValueFactory<>("vehicleType"));
+        TableColumn<Vehicle, String> brandColumn1 = new TableColumn<>("Märke");
+        brandColumn1.setCellValueFactory(new PropertyValueFactory<>("brand"));
+        TableColumn<Vehicle, Integer> priceColumn1 = new TableColumn<>("Pris (kr/dag)");
+        priceColumn1.setCellValueFactory(new PropertyValueFactory<>("price"));
+        TableColumn<Vehicle, String> itemColumn1 = new TableColumn<>("Artikelnr");
+        itemColumn1.setCellValueFactory(new PropertyValueFactory<>("itemNumber"));
 
-        TableColumn<Trailer, Number> widthColumn = new TableColumn("Bredd (cm)");
-        widthColumn.setCellValueFactory(new PropertyValueFactory<>("width"));
-
-        TableColumn<Trailer, Number> itemNumberColumn = new TableColumn("Artikelnummer");
-        itemNumberColumn.setCellValueFactory(new PropertyValueFactory<>("itemNumber"));
-
-        Text headLineChosenVehicle = new Text("");
-        headLineChosenVehicle.setFont(Font.font("Arial", FontWeight.BOLD, 16));
-        headLineChosenVehicle.setFill(Color.web("#2E2E2E"));
-
-        //VARIABELNAMN
-        TextFlow textFlowNU = new TextFlow();
-        textFlowNU.getChildren().add(headLineChosenVehicle);
-
-        TableColumn<Trailer, Void> selectButtonColumn = new TableColumn<>("Välj");
-        selectButtonColumn.setCellFactory(col -> new TableCell<Trailer, Void>() {
+        TableColumn<Vehicle, Void> selectColumn1 = new TableColumn<>("Välj");
+        selectColumn1.setCellFactory(col -> new TableCell<Vehicle, Void>() {
             Button selectButton = new Button("Välj");
-            HBox buttons = new HBox(5);
+            HBox selectHBox = new HBox(selectButton);
+
             {
-                buttons.setAlignment(Pos.CENTER);
-                buttons.getChildren().addAll(selectButton);
+                selectHBox.setAlignment(Pos.CENTER);
                 selectButton.setOnAction(e -> {
-
-                    Trailer selectedTrailer = getTableView().getItems().get(getIndex());
-                    vehicleInstansvariabel = selectedTrailer;
-                    headLineChosenVehicle.setText("Valt fordon");
-                    printVehicleInfo(vehicleInstansvariabel, textFlowNU);
-
-
+                    Vehicle selectedVehicle = getTableView().getItems().get(getIndex());
+                    vehicle = selectedVehicle;
+                    headLineChosenVehicle.setText("Valt fordon\n");
+                    printVehicleInfoTextFlow.getChildren().setAll(headLineChosenVehicle);
+                    printVehicleInfo(selectedVehicle, printVehicleInfoTextFlow);
                 });
             }
+
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) {
-                    setGraphic(null);
-                }
-                else {
-                    setGraphic(buttons);
-                }
+                setGraphic(empty ? null : selectHBox);
             }
         });
 
-        trailersTableView.getColumns().addAll(brandColumn, priceColumn, lengthColumn, widthColumn,
-                itemNumberColumn, selectButtonColumn);
-        trailersTableView.setStyle(
-                "-fx-border-color: black;" +
-                        "-fx-border-width: 1;"
-        );
+        allVehicleTableView.getColumns().addAll(vehicleTypeColumn1, brandColumn1, priceColumn1, itemColumn1, selectColumn1);
+        allVehicleTableView.setItems(inventory.getInventoryObservableList());
 
-        TabPane tabPane = new TabPane();
-        tabPane.getStyleClass().add("spaced-tabs");
-        tabPane.setStyle("-fx-padding: 10");
+        TableView<Vehicle> trailersTableView = new TableView<>();
+        trailersTableView.setEditable(true);
+        trailersTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        trailersTableView.setId("customTable");
 
-        Tab trailersTab = new Tab();
-        Label trailersLabel = new Label("Släpvagnar");
-        uiStyler.styleTabs(trailersLabel, trailersTab);
-        trailersTab.setGraphic(trailersLabel);
-        trailersTab.setContent(vBoxTrailer);
+        TableColumn<Vehicle, String> vehicleType2 = new TableColumn<>("Fordonstyp");
+        vehicleType2.setCellValueFactory(new PropertyValueFactory<>("vehicleType"));
+        TableColumn<Vehicle, String> brandColumn2 = new TableColumn<>("Märke");
+        brandColumn2.setCellValueFactory(new PropertyValueFactory<>("brand"));
+        TableColumn<Vehicle, Integer> priceColumn2 = new TableColumn<>("Pris (kr/dag)");
+        priceColumn2.setCellValueFactory(new PropertyValueFactory<>("price"));
+        TableColumn<Vehicle, String> itemColumn2 = new TableColumn<>("Artikelnr");
+        itemColumn2.setCellValueFactory(new PropertyValueFactory<>("itemNumber"));
+        TableColumn<Vehicle, Integer> lengthColumn = new TableColumn<>("Längd (i cm)");
+        lengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
+        TableColumn<Vehicle, Integer> widthColumn = new TableColumn<>("Bredd (i cm)");
+        widthColumn.setCellValueFactory(new PropertyValueFactory<>("width"));
 
-        List<Trailer> trailerList = rentalService.filterItemsEndastTrailersDEN_NYA();
-        ObservableList<Trailer> trailers = FXCollections.observableArrayList(trailerList);
+        TableColumn<Vehicle, Void> selectColumn2 = new TableColumn<>("Välj");
+        selectColumn2.setCellFactory(col -> new TableCell<Vehicle, Void>() {
+            Button selectButtonTrailer = new Button("Välj");
+            HBox trailerHBox = new HBox(selectButtonTrailer);
+
+            {
+                trailerHBox.setAlignment(Pos.CENTER);
+                selectButtonTrailer.setOnAction(e -> {
+                    Vehicle selectedTrailer = getTableView().getItems().get(getIndex());
+                    vehicle = selectedTrailer;
+                    headLineChosenVehicle.setText("Valt fordon\n");
+                    printVehicleInfoTextFlow.getChildren().setAll(headLineChosenVehicle);
+                    printVehicleInfo(selectedTrailer, printVehicleInfoTextFlow);
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : trailerHBox);
+            }
+        });
+
+        trailersTableView.getColumns().addAll(vehicleType2, brandColumn2, priceColumn2, itemColumn2, lengthColumn, widthColumn, selectColumn2);
         trailersTableView.setItems(trailers);
 
-        //************LAWNMOWERS************
-        TableView<LawnMower> lawnMowersTableView = new TableView();      //Metod som fixar?
-        lawnMowersTableView.setEditable(false);                         //VAD GÖR DENNA
-        lawnMowersTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        TableView<Vehicle> roboticLawnMowersTableView = new TableView<>();
+        roboticLawnMowersTableView.setEditable(true);
+        roboticLawnMowersTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        roboticLawnMowersTableView.setId("customTable");
 
-        VBox vBoxLawnMower = new VBox();
-        vBoxLawnMower.getChildren().addAll(lawnMowersTableView);
-        vBoxLawnMower.setPadding(new Insets(10, 10, 0, 10));
+        TableColumn<Vehicle, String> vehicleTypeColumn3 = new TableColumn<>("Fordonstyp");
+        vehicleTypeColumn3.setCellValueFactory(new PropertyValueFactory<>("vehicleType"));
+        TableColumn<Vehicle, String> brandColumn3 = new TableColumn<>("Märke");
+        brandColumn3.setCellValueFactory(new PropertyValueFactory<>("brand"));
+        TableColumn<Vehicle, Integer> priceColumn3 = new TableColumn<>("Pris (kr/dag)");
+        priceColumn3.setCellValueFactory(new PropertyValueFactory<>("price"));
+        TableColumn<Vehicle, String> itemColumn3 = new TableColumn<>("Artikelnr");
+        itemColumn3.setCellValueFactory(new PropertyValueFactory<>("itemNumber"));
+        TableColumn<Vehicle, Integer> weightColumn1 = new TableColumn<>("Vikt (kg)");
+        weightColumn1.setCellValueFactory(new PropertyValueFactory<>("weight"));
+        TableColumn<Vehicle, Integer> lawnSize = new TableColumn<>("Kapacitet (m2)");
+        lawnSize.setCellValueFactory(new PropertyValueFactory<>("lawnSize"));
 
-        Tab lawnMowersTab = new Tab();
-        Label lawnMowersLabel = new Label("Gräsklippare");
-        uiStyler.styleTabs(lawnMowersLabel, lawnMowersTab);
-        lawnMowersTab.setGraphic(lawnMowersLabel);
-        lawnMowersTab.setContent(lawnMowersTableView);
+        TableColumn<Vehicle, Void> selectColumn3 = new TableColumn<>("Välj");
+        selectColumn3.setCellFactory(col -> new TableCell<Vehicle, Void>() {
+            Button choseButtonRoboticLawnMower = new Button("Välj");
+            HBox roboticMowerHBox = new HBox(choseButtonRoboticLawnMower);
 
-        //************ALLA************
-        Tab allVehiclesTab = new Tab();
-        Label allVehiclesLabel = new Label("Alla fordon");
-        uiStyler.styleTabs(allVehiclesLabel, allVehiclesTab);
-        allVehiclesTab.setGraphic(allVehiclesLabel);
-        //***********************
-
-        tabPane.getTabs().addAll(trailersTab, lawnMowersTab, allVehiclesTab);
-
-        Label alreadyRentedLabel = new Label("");
-
-        Button valtFordonKlarButton = new Button("Klar");
-        uiStyler.styleOrdinaryButton(valtFordonKlarButton);
-        valtFordonKlarButton.setOnAction(e -> {
-
-             //*******INUTI DENNA ACTIONEVENT*********
-            //Felhantering, "Du har inte valt något fordon"
-
-            if (rentalService.checkIfRentedOut(vehicleInstansvariabel)) {
-                alreadyRentedLabel.setText("Fordonet är redan uthyrt. Välj ett annat.");
-                //Den här kollen borde väl ligga vid Välj-lnappen ist. Här måste det väl iuofs också vara ngn slags koll.
-                //Ska inte kunna trycka på Klar förrän valt fordon som inte är bokat.
+            {
+                roboticMowerHBox.setAlignment(Pos.CENTER);
+                choseButtonRoboticLawnMower.setOnAction(e -> {
+                    Vehicle selectedRoboticLawnMower = getTableView().getItems().get(getIndex());
+                    vehicle = selectedRoboticLawnMower;
+                    headLineChosenVehicle.setText("Valt fordon\n");
+                    printVehicleInfoTextFlow.getChildren().setAll(headLineChosenVehicle);
+                    printVehicleInfo(selectedRoboticLawnMower, printVehicleInfoTextFlow);
+                });
             }
 
-            else {
-                vehicleRegistryStage.close();
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : roboticMowerHBox);
             }
         });
 
-        HBox hBox = new HBox();
-        hBox.setSpacing(70);
-        hBox.setStyle("-fx-padding: 20");
-        hBox.setAlignment(Pos.BOTTOM_RIGHT);            //HÄR HÄR IN MED TEXTFLOW
-        hBox.getChildren().addAll(headLineChosenVehicle, textFlowNU, alreadyRentedLabel, valtFordonKlarButton);
+        roboticLawnMowersTableView.getColumns().addAll(vehicleTypeColumn3, brandColumn3, priceColumn3,
+                itemColumn3, weightColumn1, lawnSize, selectColumn3);
+        roboticLawnMowersTableView.setItems(roboticLawnMowers);
 
-        BorderPane borderPaneMain = new BorderPane();
-        borderPaneMain.setTop(headingLabel);
-        BorderPane.setAlignment(headingLabel, Pos.CENTER);
-        BorderPane.setMargin(headingLabel, new Insets(10));
-        borderPaneMain.setCenter(tabPane);
-        borderPaneMain.setBottom(hBox);
+        TableView<Vehicle> rideOnLawnMowersTableView = new TableView<>();
+        rideOnLawnMowersTableView.setEditable(true);
+        rideOnLawnMowersTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        rideOnLawnMowersTableView.setId("customTable");
 
-        Scene scene = new Scene(borderPaneMain, 800, 750);
-        vehicleRegistryStage.setScene(scene);
-        vehicleRegistryStage.showAndWait();         //showAndWait låser huvudfönstret.
+        TableColumn<Vehicle, String> vehicleType4 = new TableColumn<>("Fordonstyp");
+        vehicleType4.setCellValueFactory(new PropertyValueFactory<>("vehicleType"));
+        TableColumn<Vehicle, String> brandColumn4 = new TableColumn<>("Märke");
+        brandColumn4.setCellValueFactory(new PropertyValueFactory<>("brand"));
+        TableColumn<Vehicle, Integer> priceColumn4 = new TableColumn<>("Pris (kr/dag)");
+        priceColumn4.setCellValueFactory(new PropertyValueFactory<>("price"));
+        TableColumn<Vehicle, String> itemNr4 = new TableColumn<>("Artikelnr");
+        itemNr4.setCellValueFactory(new PropertyValueFactory<>("itemNumber"));
+        TableColumn<Vehicle, Integer> weightColumn2 = new TableColumn<>("Vikt (kg)");
+        weightColumn2.setCellValueFactory(new PropertyValueFactory<>("weight"));
+
+        TableColumn<Vehicle, Void> selectColumn4 = new TableColumn<>("Välj");
+        selectColumn4.setCellFactory(col -> new TableCell<Vehicle, Void>() {
+            Button rideOnChoseButton = new Button("Välj");
+            HBox rideOnHBox = new HBox(rideOnChoseButton);
+
+            {
+                rideOnHBox.setAlignment(Pos.CENTER);
+                rideOnChoseButton.setOnAction(e -> {
+                    Vehicle selectedRideOn = getTableView().getItems().get(getIndex());
+                    vehicle = selectedRideOn;
+                    headLineChosenVehicle.setText("Valt fordon\n");
+                    printVehicleInfoTextFlow.getChildren().setAll(headLineChosenVehicle);
+                    printVehicleInfo(selectedRideOn, printVehicleInfoTextFlow);
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : rideOnHBox);
+            }
+        });
+
+        rideOnLawnMowersTableView.getColumns().addAll(vehicleType4, brandColumn4, priceColumn4, itemNr4,
+                weightColumn2, selectColumn4);
+        rideOnLawnMowersTableView.setItems(rideOnLawnMowers);
+
+        TabPane tabPane = new TabPane();
+
+        Label allVehicleLabel = new Label("Alla fordon");
+        Tab allVehicleTab = new Tab("", allVehicleTableView);
+        uiStyler.styleTabs(allVehicleLabel, allVehicleTab);
+
+        Label trailersLabel = new Label("Släpvagnar");
+        Tab trailersTab = new Tab("", trailersTableView);
+        uiStyler.styleTabs(trailersLabel, trailersTab);
+
+        Label roboticLawnMowersLabel = new Label("Robotgräsklippare");
+        Tab roboticLawnMowersTab = new Tab("", roboticLawnMowersTableView);
+        uiStyler.styleTabs(roboticLawnMowersLabel, roboticLawnMowersTab);
+
+        Label rideOnLawnMowersLabel = new Label("Åkgräsklippare");
+        Tab rideOnLawnMowersTab = new Tab("", rideOnLawnMowersTableView);
+        uiStyler.styleTabs(rideOnLawnMowersLabel, rideOnLawnMowersTab);
+
+        tabPane.getTabs().addAll(allVehicleTab, trailersTab, roboticLawnMowersTab, rideOnLawnMowersTab);
+
+        TextField searchTextField = new TextField();
+        searchTextField.setPromptText("Sök fordon");
+
+        Label infoAboutSearchLabel = new Label("Du kan söka på fordonstyp, märke och artikelnummer");
+        Button searchButton = new Button("Sök");
+        searchButton.setPrefSize(100, 25);
+        searchButton.setStyle("-fx-background-radius: 5;");
+        searchButton.setOnAction(e -> {
+
+            String userInput = searchTextField.getText();
+            Vehicle foundVehicle = inventory.findVehicle(userInput);
+
+            if (searchTextField.getText().equals("")) {
+                searchTextField.setStyle("-fx-border-color: #C0392B; -fx-border-width: 2;");
+                infoAboutSearchLabel.setStyle("-fx-text-fill: #C0392B");
+                infoAboutSearchLabel.setText("Du måste ange värde i sökfältet");
+            }
+            else if (foundVehicle == null) {
+                searchTextField.setStyle("-fx-border-color: #000000; -fx-border-width: 0;");
+                infoAboutSearchLabel.setStyle("-fx-text-fill: black");
+                infoAboutSearchLabel.setText("Det fordonet finns inte");
+            }
+            else {
+                searchTextField.setStyle("-fx-border-color: #000000; -fx-border-width: 0;");
+
+                tabPane.getSelectionModel().select(allVehicleTab);
+
+                int index = allVehicleTableView.getItems().indexOf(foundVehicle);
+                if (index >= 0) {
+                    allVehicleTableView.scrollTo(index);
+                    allVehicleTableView.getSelectionModel().clearAndSelect(index);
+                    allVehicleTableView.requestFocus();
+                }
+            }
+        });
+
+        VBox vBox2;
+        VBox vBox3;
+        Label alreadyRentedLabel = new Label("");
+        alreadyRentedLabel.setStyle("-fx-text-fill: #C0392B");
+        alreadyRentedLabel.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+
+        if (openVehicleRegistryFromBookWindow == true) {
+
+            Button changeVehicleButton = new Button("Ändra");
+            uiStyler.styleOrdinaryButton(changeVehicleButton);
+            changeVehicleButton.setOnAction(e -> {
+
+                if (vehicle == null) {
+                }
+
+                else {
+                    previousVehicleScene = stage.getScene();
+                    previousVehicleHeadLine = stage.getTitle();
+                    addOrChangeVehicleWindow(stage);
+                }
+
+            });
+
+            Button removeVehicleButton = new Button("Ta bort");
+            uiStyler.styleOrdinaryButton(removeVehicleButton);
+            removeVehicleButton.setOnAction(e -> {
+
+                if (vehicle == null) {
+                }
+                else {
+                        String title = "BORTTAG AV FORDON";
+                        String header = "Är du säker på att du vill ta bort fordonet?";
+                        boolean removeVehicle = confirmRemovalAlertWindow(title, header);
+
+                        if (removeVehicle == true) {
+
+                            inventory.removeVehicle(vehicle);
+                            printVehicleInfoTextFlow.getChildren().clear();
+                        }
+                }
+            });
+
+            vBox2 = new VBox();
+            vBox2.setAlignment(Pos.CENTER);
+            vBox2.setSpacing(20);
+            vBox2.setPadding(new Insets(0, 90, 0,0 ));
+            vBox2.getChildren().addAll(removeVehicleButton, changeVehicleButton);
+
+            Button returnToMenuButton = uiStyler.styleReturnToMenuButton();
+            returnToMenuButton.setOnAction(e -> mainMenuWindow(stage));
+
+            vBox3 = new VBox();
+            vBox3.setAlignment(Pos.BOTTOM_RIGHT);
+            vBox3.getChildren().addAll(returnToMenuButton);
+        }
+
+        else {
+
+            Button valtFordonKlarButton = new Button("Klar");
+            uiStyler.styleOrdinaryButton(valtFordonKlarButton);
+            valtFordonKlarButton.setOnAction(e -> {
+
+                if (rentalService.checkIfRentedOut(vehicle)) {
+                    alreadyRentedLabel.setText("Fordonet är redan uthyrt\n\n   Välj ett annat");
+                }
+
+                else {
+                    ((Stage) ((Node) e.getSource()).getScene().getWindow()).close();
+                }
+            });
+
+            vBox2 = new VBox();
+            vBox2.setAlignment(Pos.CENTER);
+            vBox2.setPadding(new Insets(0, 40, 0, 0));
+            vBox2.getChildren().addAll(alreadyRentedLabel);
+
+            vBox3 = new VBox();
+            vBox3.setAlignment(Pos.BOTTOM_RIGHT);
+            vBox3.getChildren().addAll(valtFordonKlarButton);
+        }
+
+        HBox onTopHBox = new HBox();
+        onTopHBox.setSpacing(20);
+        onTopHBox.getChildren().addAll(searchTextField, searchButton, infoAboutSearchLabel);
+
+        VBox onTopVBox = new VBox();
+        onTopVBox.setSpacing(30);
+        onTopVBox.setAlignment(Pos.CENTER);
+        onTopVBox.setPadding(new Insets(20, 10, 30, 10));
+        onTopVBox.getChildren().addAll(headingLabel, onTopHBox);
+
+        VBox vBox1 = new VBox();
+        vBox1.setPadding(new Insets(10, 0, 0, 20));
+        vBox1.getChildren().addAll(headLineChosenVehicle, printVehicleInfoTextFlow);
+
+        BorderPane bottomBorderPane = new BorderPane();
+        bottomBorderPane.setPadding(new Insets(20));
+        bottomBorderPane.setPrefHeight(235);
+        bottomBorderPane.setMinHeight(Region.USE_PREF_SIZE);
+        bottomBorderPane.setMaxHeight(Region.USE_PREF_SIZE);
+        bottomBorderPane.setLeft(vBox1);
+        bottomBorderPane.setCenter(vBox2);
+        bottomBorderPane.setRight(vBox3);
+        BorderPane.setAlignment(vBox1, Pos.BOTTOM_LEFT);
+        BorderPane.setAlignment(vBox2, Pos.CENTER);
+        BorderPane.setAlignment(vBox3, Pos.BOTTOM_RIGHT);
+
+        BorderPane mainBorderPane = new BorderPane();
+        mainBorderPane.setStyle("-fx-background-color: #96ACA6;");
+        mainBorderPane.setTop(onTopVBox);
+        mainBorderPane.setCenter(tabPane);
+        mainBorderPane.setBottom(bottomBorderPane);
+
+        Scene scene = new Scene(mainBorderPane, 800, 750);
+        scene.getStylesheets().add("style.css");
+        stage.setScene(scene);
     }
 
-    public void vehicleRegistrySearchChange()   {
-    }
-
-    public void vehicleRegistryBook()   {
-
-    }
-
-    //********UTHYRNING**************
+    //********RENTAL**************
     public void bookRentalsWindow(Stage stage) {
         stage.setTitle("BOKA FORDON");
 
@@ -1054,11 +1502,23 @@ public class Main extends Application {
 
         Button openVehicleRegisterButton = new Button("Till fordonsregistet (öppnas i nytt fönster) ");
         uiStyler.styleLongerButton(openVehicleRegisterButton);
+
         openVehicleRegisterButton.setOnAction(e -> {
 
-            vehicleRegistryGEMENSAM(stage);
-            printVehicleInfo(vehicleInstansvariabel, vehicleSummaryTextFlow);
+            openVehicleRegistryFromBookWindow = false;
+            Stage popupStage = new Stage();
+            popupStage.initOwner(stage);
+            popupStage.initModality(Modality.WINDOW_MODAL);
+            vehicleRegistryTableView(popupStage);
+            popupStage.showAndWait();
+
+            if (vehicle == null) {
+                return;
+            }
+
             headLineChosenVehicle.setText("Valt fordon\n");
+            vehicleSummaryTextFlow.getChildren().setAll(headLineChosenVehicle);
+            printVehicleInfo(vehicle, vehicleSummaryTextFlow);
             nextButtonVehicle.setDisable(false);
         });
 
@@ -1093,7 +1553,6 @@ public class Main extends Application {
         toDateLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         DatePicker toDatePicker = new DatePicker();
 
-        //Ta bort den här knappen? Använder den ju inte nu.
         Button selectFromDateButton = new Button("Välj");
         selectFromDateButton.setPrefSize(60, 20);
         selectFromDateButton.setStyle("-fx-background-radius: 5;");
@@ -1107,10 +1566,10 @@ public class Main extends Application {
         selectToDateButton.setPrefSize(60, 20);
         selectToDateButton.setStyle("-fx-background-radius: 5;");
         selectToDateButton.setOnAction(e -> {
-               fromDateInstansvariabel = fromDatePicker.getValue();
-               toDateInstansvariabel = toDatePicker.getValue();
+               fromDate = fromDatePicker.getValue();
+               toDate = toDatePicker.getValue();
 
-               numberOfDays = (int) ChronoUnit.DAYS.between(fromDateInstansvariabel, toDateInstansvariabel);
+               numberOfDays = (int) ChronoUnit.DAYS.between(fromDate, toDate);
 
                 if (numberOfDays < 0)   {
                     toDatePicker.setStyle("-fx-border-color: #C0392B; -fx-border-width: 2;");
@@ -1170,7 +1629,7 @@ public class Main extends Application {
         uiStyler.styleLongerButton(openMemberRegisterButton);
         openMemberRegisterButton.setOnAction(e -> {
                 memberRegistryBook();
-                printMemberInfo(memberInstansvariabel, memberSummaryTextFlow);
+                printMemberInfo(member, memberSummaryTextFlow);
                 headLineChosenMember.setText("Vald medlem\n");
                 finishBookingButton.setDisable(false);
         });
@@ -1201,7 +1660,7 @@ public class Main extends Application {
 
         Button printReceiptButton = new Button("Skriv ut kvitto");
         uiStyler.styleLongerButton(printReceiptButton);
-        printReceiptButton.setOnAction(e -> receiptPopUp(stage));
+        printReceiptButton.setOnAction(e -> receipt());
 
         VBox confirmationVBox = new VBox();
         uiStyler.styleVBoxBooking(confirmationVBox);
@@ -1219,8 +1678,8 @@ public class Main extends Application {
 
             borderPane.setCenter(confirmationVBox);
 
-            rentalInstansvariabel = rentalService.addBooking(vehicleInstansvariabel, numberOfDays, memberInstansvariabel);
-            finalPriceInstansvariabel = rentalService.calculatePrice(rentalInstansvariabel);
+            rental = rentalService.addBooking(vehicle, numberOfDays, member);
+            finalPrice = rentalService.calculatePrice(rental);
             printBookingConfirmation(numberOfDays, confirmationPrintTextFlow);
         });
 
@@ -1235,7 +1694,7 @@ public class Main extends Application {
         stage.show();
     }
 
-    public void receiptPopUp(Stage stage) {
+    public void receipt() {
 
         Stage receiptStage = new Stage();
         receiptStage.initModality(Modality.APPLICATION_MODAL);
@@ -1248,17 +1707,17 @@ public class Main extends Application {
         Label starsLabel1 = new Label("********************************************");
         starsLabel1.setFont(Font.font("Courier New", FontWeight.NORMAL, 14));
 
-        Label vehicleTypeBrandLabel = new Label(vehicleInstansvariabel.getVehicleType() + " " + vehicleInstansvariabel.getBrand());
+        Label vehicleTypeBrandLabel = new Label(vehicle.getVehicleType() + " " + vehicle.getBrand());
         vehicleTypeBrandLabel.setFont(Font.font("Courier New", FontWeight.NORMAL, 14));
         Label daysAndPriceLabel = new Label();
         daysAndPriceLabel.setFont(Font.font("Courier New", FontWeight.NORMAL, 14));
-        Label amountLabel = new Label("       " + rentalInstansvariabel.getNumberOfDays() + " dag * " +
-                vehicleInstansvariabel.getPrice() + " kr     " + finalPriceInstansvariabel + " kr");
+        Label amountLabel = new Label("       " + rental.getNumberOfDays() + " dag * " +
+                vehicle.getPrice() + " kr     " + finalPrice + " kr");
         amountLabel.setFont(Font.font("Courier New", FontWeight.NORMAL, 14));
 
         Label starsLabel2 = new Label("********************************************");
         starsLabel2.setFont(Font.font("Courier New", FontWeight.NORMAL, 14));
-        Label totalAmountLabel = new Label("          Totalt      " + finalPriceInstansvariabel + " kr");
+        Label totalAmountLabel = new Label("          Totalt      " + finalPrice + " kr");
         totalAmountLabel.setFont(Font.font("Courier New", FontWeight.BOLD, 14));
 
         Label starsLabel3 = new Label("********************************************");
@@ -1297,47 +1756,166 @@ public class Main extends Application {
         receiptStage.showAndWait();
     }
 
-    public void ongoingRentalWindow(Stage stage) {
+    public void ongoingAndReturnRentalWindow(Stage stage) {
         stage.setTitle("PÅGÅENDE UTHYRNINGAR");
 
         Label headingLabel = new Label("Uthyrda fordon just nu");
         uiStyler.styleHeadingLabel(headingLabel);
 
+        TableView <Rental> ongoingRentalsTableView = new TableView<>();
+        ongoingRentalsTableView.setEditable(true);
+        ongoingRentalsTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        ongoingRentalsTableView.setId("customTable");
+        ongoingRentalsTableView.setSelectionModel(null);
+
+        ongoingRentalsTableView.setRowFactory(tv -> new TableRow<Rental>() {
+            @Override
+            protected void updateItem(Rental item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty || item == null) {
+                    setStyle("");
+                }
+                else if (item == chosenRentalInRegistryHighlight) {
+                    setStyle("-fx-background-color: #82a9a1;");
+                }
+                else {
+                    setStyle("");
+                }
+            }
+        });
+
+        TableColumn<Rental, String> memberColumn = new TableColumn<>("Medlem");
+        memberColumn.setCellValueFactory(new PropertyValueFactory<>("member"));
+        memberColumn.setCellValueFactory(cellData ->
+        new ReadOnlyStringWrapper(cellData.getValue().getMember().getFirstName() + " " +
+                cellData.getValue().getMember().getLastName() + "\n(" +
+                cellData.getValue().getMember().getPersonalIdNumber() + " )"));
+
+        TableColumn<Rental, String> vehicleColumn = new TableColumn<>("Fordon");
+        vehicleColumn.setCellValueFactory(cellData ->
+                new ReadOnlyStringWrapper(cellData.getValue().getItem().getVehicleType() +
+                        " (" + cellData.getValue().getItem().getBrand() + ")\n" +
+                        cellData.getValue().getItem().getPrice() +
+                        " kr/dag\nArtikelnr: " + cellData.getValue().getItem().getItemNumber()));
+
+        TableColumn<Rental, String> numberOfDaysColumn = new TableColumn<>("Antal dagar");
+        numberOfDaysColumn.setCellValueFactory(new PropertyValueFactory<>("numberOfDays"));
+
+        Text headLineChosenRental = new Text("Ingen uthyrning vald");
+        headLineChosenRental.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        headLineChosenRental.setFill(Color.web("#4F6F66"));
+
+        TextFlow ongoingRentalTextFlow = new TextFlow();
+        ongoingRentalTextFlow.getChildren().add(headLineChosenRental);
+
+        Label rentalReturnedLabel = new Label();
+
+        TableColumn<Rental, Void> selectRentalColumn = new TableColumn<>("Välj");
+        selectRentalColumn.setCellFactory(col -> new TableCell<Rental, Void>() {
+
+            Button selectRentalButton = new Button("Välj");
+            HBox selectRentalHBox = new HBox(5);
+
+            {
+                selectRentalHBox.setAlignment(Pos.CENTER);
+                selectRentalHBox.getChildren().addAll(selectRentalButton);
+                selectRentalButton.setOnAction(e -> {
+
+                    rentalReturnedLabel.setText("");
+
+                    Rental selectedRental = getTableView().getItems().get(getIndex());
+                    rental = selectedRental;
+
+                    chosenRentalInRegistryHighlight = selectedRental;
+                    ongoingRentalsTableView.refresh();
+
+                    headLineChosenRental.setText("Vald uthyrning\n");
+                    ongoingRentalTextFlow.getChildren().setAll(headLineChosenRental);
+                    printRentalInfo(selectedRental, ongoingRentalTextFlow);
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                }
+
+                else {
+                    setGraphic(selectRentalHBox);
+                }
+            }
+        });
+
+        ongoingRentalsTableView.getColumns().addAll(memberColumn, vehicleColumn, numberOfDaysColumn,  selectRentalColumn);
+        ongoingRentalsTableView.setStyle("-fx-border-color: black;" + "-fx-border-width: 1;");
+
+        rentalsObservableList = rentalService.getRentalsObservableList();
+        ongoingRentalsTableView.setItems(rentalsObservableList);
+
+        rentalReturnedLabel.setStyle("-fx-text-fill: #4F6F66;");
+        rentalReturnedLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+
+        Button returnRentalButton = new Button("Återlämna\n   fordon");
+        returnRentalButton.getStyleClass().add("button-ordinary");
+        returnRentalButton.setPrefSize(125, 60);
+        returnRentalButton.setOnAction(e -> {
+
+                    if (rental == null) {
+                    }
+
+                    else {
+                        rentalService.returnItem(rental);
+                        ongoingRentalTextFlow.getChildren().clear();
+                        rentalReturnedLabel.setText("Fordonet är återlämnat");
+                    }
+        });
+
         Button returnToMenuButton = uiStyler.styleReturnToMenuButton();
         returnToMenuButton.setOnAction(e -> mainMenuWindow(stage));
 
-        HBox hBox = new HBox();
-        hBox.getChildren().addAll(returnToMenuButton);
+        HBox topHBox = new HBox();
+        topHBox.setAlignment(Pos.CENTER);
+        topHBox.setPadding(new Insets(30, 0, 50, 0));
+        topHBox.getChildren().addAll(headingLabel);
+
+        VBox vBox1 = new VBox();
+        vBox1.setPadding(new Insets(10, 0, 0, 15));
+        vBox1.getChildren().addAll(headLineChosenRental, ongoingRentalTextFlow, rentalReturnedLabel);
+
+        VBox vBox2 = new VBox();
+        vBox2.setAlignment(Pos.CENTER);
+        vBox2.setPadding(new Insets(0, 90, 0, 40));
+        vBox2.getChildren().addAll(returnRentalButton);
+
+        VBox vBox3 = new VBox();
+        vBox3.setAlignment(Pos.BOTTOM_RIGHT);
+        vBox3.getChildren().addAll(returnToMenuButton);
+
+        HBox bottomHBox = new HBox();
+        bottomHBox.setSpacing(90);
+        bottomHBox.setStyle("-fx-padding: 20");
+        bottomHBox.setAlignment(Pos.BOTTOM_RIGHT);
+        bottomHBox.setPrefHeight(200);
+        bottomHBox.setMinHeight(Region.USE_PREF_SIZE);
+        bottomHBox.setMaxHeight(Region.USE_PREF_SIZE);
+        bottomHBox.getChildren().addAll(vBox1, vBox2, vBox3);
 
         BorderPane borderPane = new BorderPane();
-        borderPane.setTop(headingLabel);
+        borderPane.setStyle("-fx-background-color: #96ACA6;");
+        borderPane.setTop(topHBox);
+        borderPane.setCenter(ongoingRentalsTableView);
+        borderPane.setBottom(bottomHBox);
 
-        Scene scene = uiStyler.styleWindow(hBox, borderPane);
+        Scene scene = new Scene(borderPane, 800, 750);
+        scene.getStylesheets().add("style.css");
         stage.setScene(scene);
         stage.show();
     }
 
-    public void returnVehicleWindow(Stage stage) {
-        stage.setTitle("ÅTERLÄMNA FORDON");
-
-        Label headingLabel = new Label("Återlämna fordon");
-        uiStyler.styleHeadingLabel(headingLabel);
-
-        Button returnToMenuButton = uiStyler.styleReturnToMenuButton();
-        returnToMenuButton.setOnAction(e -> mainMenuWindow(stage));
-
-        HBox hBox = new HBox();
-        hBox.getChildren().addAll(returnToMenuButton);
-
-        BorderPane borderPane = new BorderPane();
-        borderPane.setTop(headingLabel);
-
-        Scene scene = uiStyler.styleWindow(hBox, borderPane);
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    //********EKONOMI************
+    //********ECONOMY************
     public void sumRevenueWindow(Stage stage) {
         stage.setTitle("SUMMERA INTÄKTER");
 
@@ -1392,7 +1970,30 @@ public class Main extends Application {
         stage.show();
     }
 
-    //********PRINT-METODER
+    //******ALERT**************
+    public Boolean confirmRemovalAlertWindow(String title, String header)   {
+
+        Alert confirmationAlert = new Alert(Alert.AlertType.WARNING);
+        confirmationAlert.setTitle(title);
+        confirmationAlert.setHeaderText(header);
+        confirmationAlert.getDialogPane().getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        confirmationAlert.getDialogPane().getStyleClass().add("remove-member-alert");
+        confirmationAlert.getButtonTypes().clear();
+
+        ButtonType okButton = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelButton = new ButtonType("Avbryt", ButtonBar.ButtonData.CANCEL_CLOSE);
+        confirmationAlert.getButtonTypes().setAll(okButton, cancelButton);
+
+        Optional<ButtonType> userChoice = confirmationAlert.showAndWait();
+
+        if (userChoice.isPresent() && userChoice.get() == okButton) {
+                return true;
+        }
+
+        return false;
+    }
+
+    //********PRINT************
     public void printMemberInfo(Member member, TextFlow textFlow)    {
 
         textFlow.setLineSpacing(6);
@@ -1422,7 +2023,7 @@ public class Main extends Application {
 
         textFlow.setLineSpacing(6);
 
-        Text topLine = new Text("──────────────────\n");
+        Text topLine = new Text("───────────────────────\n");
         topLine.setFill(Color.web("#6F8F86"));
 
         Text typeAndBrand = new Text(vehicle.getVehicleType() + " (" + vehicle.getBrand() + ")\n");
@@ -1433,11 +2034,11 @@ public class Main extends Application {
         price.setFont(Font.font("Arial", FontWeight.BOLD, 13));
         price.setFill(Color.web("#4F6F66"));
 
-        Text itemNr = new Text("Artikelnr: " + vehicle.getItemNumber() + "\n\n");
+        Text itemNr = new Text("Artikelnr: " + vehicle.getItemNumber() + "\n");
         itemNr.setFont(Font.font("Arial", FontWeight.NORMAL, 13));
         itemNr.setFill(Color.web("#2E2E2E"));
 
-        Text bottomLine = new Text("\n──────────────────");
+        Text bottomLine = new Text("───────────────────────");
         bottomLine.setFill(Color.web("#6F8F86"));
 
         textFlow.getChildren().addAll(topLine, typeAndBrand, price, itemNr, bottomLine);
@@ -1450,7 +2051,7 @@ public class Main extends Application {
         Text topLine = new Text("────────────────────────\n");
         topLine.setFill(Color.web("#6F8F86"));
 
-        Text fromToDate = new Text(fromDateInstansvariabel + " - " + toDateInstansvariabel + "\n");
+        Text fromToDate = new Text(fromDate + " - " + toDate + "\n");
         fromToDate.setFont(Font.font("Arial", FontWeight.BOLD, 18));
         fromToDate.setFill(Color.web("#1F2A26"));
 
@@ -1476,14 +2077,14 @@ public class Main extends Application {
         bookedVehicleHeadLine.setText("  🚘 Fordon\n");
         Text bookedVehicleText = new Text();
         bookedVehicleText.setFont(Font.font("Helvetica", FontWeight.NORMAL, 14));
-        bookedVehicleText.setText("      " + vehicleInstansvariabel.getVehicleType() + " (" + vehicleInstansvariabel.getBrand() + ")");
+        bookedVehicleText.setText("      " + vehicle.getVehicleType() + " (" + vehicle.getBrand() + ")");
 
         Text bookedDateHeadLine = new Text();
         bookedDateHeadLine.setFont(Font.font("Apple Color Emoji", FontWeight.BOLD, 20));
         bookedDateHeadLine.setText("\n\n  🗓️ Period\n");
         Text bookedDateText = new Text();
         bookedDateText.setFont(Font.font("Helvetica", FontWeight.NORMAL, 14));
-        bookedDateText.setText("    " + fromDateInstansvariabel + " - " + toDateInstansvariabel +
+        bookedDateText.setText("    " + fromDate + " - " + toDate +
                     " (" + numberOfDays + " dagar)");
 
         Text bookedMemberHeadLine = new Text();
@@ -1492,8 +2093,8 @@ public class Main extends Application {
 
         Text bookedMemberText = new Text();
         bookedMemberText.setFont(Font.font("Helvetica", FontWeight.NORMAL, 14));
-        bookedMemberText.setText("   " + memberInstansvariabel.getFirstName() + " " +
-                    memberInstansvariabel.getLastName() + " (" + memberInstansvariabel.getPersonalIdNumber() + ")");
+        bookedMemberText.setText("   " + member.getFirstName() + " " +
+                    member.getLastName() + " (" + member.getPersonalIdNumber() + ")");
 
         Text priceHeadLine = new Text();
         priceHeadLine.setFont(Font.font("Apple Color Emoji", FontWeight.BOLD, 20));
@@ -1502,7 +2103,7 @@ public class Main extends Application {
         NumberFormat numberFormat = NumberFormat.getInstance(new Locale("sv", "SE"));
         Text priceText = new Text();
         priceText.setFont(Font.font("Helvetica", FontWeight.NORMAL, 14));
-        priceText.setText("                   " + numberFormat.format(finalPriceInstansvariabel) + " kr");
+        priceText.setText("                   " + numberFormat.format(finalPrice) + " kr");
 
         Text bottomLine = new Text("\n──────────────────────────────────");
         bottomLine.setStyle("-fx-text-fill: #6F8F86;");
@@ -1512,480 +2113,30 @@ public class Main extends Application {
                 bookedMemberText, priceHeadLine, priceText, bottomLine);
     }
 
+    public void printRentalInfo(Rental rental, TextFlow textFlow)   {
 
-    //******SLASK***************
-    public void searchVehicleWindow(Stage stage) {
-        stage.setTitle("SÖK FORDON ");
+        textFlow.setLineSpacing(6);
 
-        Label headingLabel = new Label("Sök efter fordon");
-        uiStyler.styleHeadingLabel(headingLabel);
+        Text topLine = new Text("──────────────────\n");
+        topLine.setFill(Color.web("#6F8F86"));
 
-        //Hur ska man kunna söka?
+        Text memberName = new Text(rental.getMember().getFirstName() + " " + rental.getMember().getLastName() + "\n");
+        memberName.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        memberName.setFill(Color.web("#1F2A26"));
 
-        Button returnToMenuButton = uiStyler.styleReturnToMenuButton();
-        returnToMenuButton.setOnAction(e -> mainMenuWindow(stage));
+        Text vehicleTypeAndBrand = new Text(rental.getItem().getVehicleType() + " " + rental.getItem().getBrand() + "\n");
+        vehicleTypeAndBrand.setFont(Font.font("Arial", FontWeight.BOLD, 13));
+        vehicleTypeAndBrand.setFill(Color.web("#4F6F66"));
 
-        HBox hBox = new HBox();
-        hBox.getChildren().addAll(returnToMenuButton);
+        Text numberOfDays = new Text(rental.getNumberOfDays() + " dagar");
+        numberOfDays.setFont(Font.font("Arial", FontWeight.NORMAL, 13));
+        numberOfDays.setFill(Color.web("#2E2E2E"));
 
-        BorderPane borderPane = new BorderPane();
-        borderPane.setTop(headingLabel);            //Ligger här tillfälligt nu
-        //borderPane.setCenter(gridPane);
+        Text bottomLine = new Text("\n──────────────────");
+        bottomLine.setFill(Color.web("#6F8F86"));
 
-        Scene scene = uiStyler.styleWindow(hBox, borderPane);
-        stage.setScene(scene);
-        stage.show();
+        textFlow.getChildren().addAll(topLine, memberName, vehicleTypeAndBrand, numberOfDays, bottomLine);
     }
-    public void deleteVehicleWindow(Stage stage) {
-        stage.setTitle("TA BORT (ÄNDRA?) FORDON ");
-
-        Label headingLabel = new Label("Ta bort (eller ändra)");
-        uiStyler.styleHeadingLabel(headingLabel);
-
-        Button changeInfoVehicle = new Button("Ändra");
-        uiStyler.styleOrdinaryButton(changeInfoVehicle);
-
-        Button deleteVehicle = new Button("Ta bort");
-        uiStyler.styleOrdinaryButton(deleteVehicle);
-        deleteVehicle.setOnAction(e -> {
-
-            Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
-            confirmationAlert.setTitle("VAD SKA STÅ HÄR?");
-            confirmationAlert.setHeaderText("Ta bort fordon");
-            confirmationAlert.setContentText("Är du säker på att du vill ta bort fordon?");
-            confirmationAlert.showAndWait();
-        });
-
-        Button returnToMenuButton = uiStyler.styleReturnToMenuButton();
-        returnToMenuButton.setOnAction(e -> mainMenuWindow(stage));
-
-        HBox hBox = new HBox();
-        hBox.getChildren().addAll(returnToMenuButton);
-
-        BorderPane borderPane = new BorderPane();
-        borderPane.setTop(headingLabel);            //Ligger här tillfälligt nu
-        borderPane.setRight(deleteVehicle);          //Ligger här tillfälligt nu
-        borderPane.setLeft(changeInfoVehicle);       //Ligger här tillfälligt nu
-        //borderPane.setCenter(gridPane);
-        //borderPane.setBottom(hBox);
-
-        Scene scene = uiStyler.styleWindow(hBox, borderPane);
-        stage.setScene(scene);
-        stage.show();
-    }
-    public void changeInfoMemberWindow (Stage stage)    {
-        stage.setTitle("ÄNDRA UPPGIFT OM MEDLEM");
-
-        Label headingLabel = new Label("Sök efter medlem som ska ändras");
-        uiStyler.styleHeadingLabel(headingLabel);
-
-        //Sen komma till metoden searchForMember, samma som används för
-        //att söka på "vanligt" sätt?
-
-        Button changeInfoMember = new Button("Ändra");
-        uiStyler.styleOrdinaryButton(changeInfoMember);
-
-        Button deleteMember = new Button("Ta bort");
-        uiStyler.styleOrdinaryButton(deleteMember);
-        deleteMember.setOnAction(e -> {
-
-            Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
-            confirmationAlert.setTitle("VAD SKA STÅ HÄR?");
-            confirmationAlert.setHeaderText("Ta bort medlem");
-            confirmationAlert.setContentText("Är du säker på att du vill ta bort medlem?");
-            confirmationAlert.showAndWait();
-
-        });
-
-        Button returnToMenuButton = uiStyler.styleReturnToMenuButton();
-        returnToMenuButton.setOnAction(e -> mainMenuWindow(stage));
-
-        HBox hBox = new HBox();
-        hBox.getChildren().addAll(returnToMenuButton);
-
-        BorderPane borderPane = new BorderPane();
-        borderPane.setTop(headingLabel);            //Ligger här tillfälligt nu
-        borderPane.setLeft(changeInfoMember);       //Ligger här tillfälligt nu
-        borderPane.setRight(deleteMember);          //Ligger här tillfälligt nu
-        //borderPane.setCenter(gridPane);
-
-        Scene scene = uiStyler.styleWindow(hBox, borderPane);
-        stage.setScene(scene);
-        stage.show();
-    }
-    public void addMemberWindowGAMMAL(Stage stage) {
-
-        stage.setTitle("MEDLEMSFORMULÄR");
-
-        Label headingLabel = new Label("Fyll i uppgifter om medlem");
-        uiStyler.styleHeadingLabel(headingLabel);
-
-        Label personalIdNrLabel = new Label("Personnummer (ÅÅMMDD-XXXX) ");
-        personalIdNrLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
-
-        Label firstNameLabel = new Label("Förnamn ");
-        firstNameLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
-        Label lastNameLabel = new Label("Efternamn ");
-        lastNameLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
-        Label membershipLevelLabel = new Label("Medlemsnivå (student, standard, premium) ");
-        membershipLevelLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
-
-        TextField personalIdNrField = new TextField();
-        TextField firstNameField = new TextField();
-        TextField lastNameField = new TextField();
-        TextField membershipLevelField = new TextField();
-
-        Label savedStatusLabel = new Label();
-        savedStatusLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
-
-        TextFlow infoAboutMemberTextFlow = new TextFlow();
-
-        Button saveButton = new Button("Spara");
-        uiStyler.styleOrdinaryButton(saveButton);
-        saveButton.setOnAction(e -> {
-
-            infoAboutMemberTextFlow.getChildren().clear();
-
-            //Sänga in det här i ngn metod för stt slippa upprepa.
-            //I en klass som grejar med felhantering??
-            if (personalIdNrField.getText().isEmpty()) {
-
-                savedStatusLabel.setText("Du har inte fyllt i alla fält!");
-                savedStatusLabel.setStyle("-fx-text-fill: #C0392B");
-                personalIdNrField.setStyle("-fx-border-color: #C0392B; -fx-border-width: 2;");
-                return;
-            }
-            personalIdNrField.setStyle("-fx-border-color: #000000; -fx-border-width: 0;");
-
-            if (firstNameField.getText().isEmpty()) {
-
-                savedStatusLabel.setText("Du har inte fyllt i alla fält!");
-                savedStatusLabel.setStyle("-fx-text-fill: #C0392B");
-                firstNameField.setStyle("-fx-border-color: #C0392B; -fx-border-width: 2;");
-                return;
-            }
-            firstNameField.setStyle("-fx-border-color: #000000; -fx-border-width: 0;");
-
-            if (lastNameField.getText().isEmpty()) {
-
-                savedStatusLabel.setText("Du har inte fyllt i alla fält!");
-                savedStatusLabel.setStyle("-fx-text-fill: #C0392B");
-                lastNameField.setStyle("-fx-border-color: #C0392B; -fx-border-width: 2;");
-                return;
-            }
-            lastNameField.setStyle("-fx-border-color: #000000; -fx-border-width: 0;");
-
-            if (membershipLevelField.getText().isEmpty()) {
-
-                savedStatusLabel.setText("Du har inte fyllt i alla fält!");
-                savedStatusLabel.setStyle("-fx-text-fill: #C0392B");
-                membershipLevelField.setStyle("-fx-border-color: #C0392B; ");
-                return;
-            }
-            membershipLevelField.setStyle("-fx-border-color: #000000; -fx-border-width: 0;");
-
-            //**************EJ KLAR - MEN FUNKAR I KONSOLEN
-            if (membershipLevelField.getText().equalsIgnoreCase("student") ||
-                membershipLevelField.getText().equalsIgnoreCase("premium")  ||
-                membershipLevelField.getText().equals("standard")) {
-
-                System.out.println("Om rätt medlemsnivå");
-            }
-
-            else {
-               savedStatusLabel.setText("Kan endast vara student, premium, standard");
-               savedStatusLabel.setStyle("-fx-text-fill: red");
-
-               System.out.println("Om fel medlemsnivå");
-            }
-
-            //**************FELHANTERING FÖR OM PNR-INPUT ÄR FEL******************
-           //Säkerställer inte rätt format men iaf rätt antal tecken...
-            String characters = personalIdNrField.getText();
-            characters.length();
-            int countCharacters = characters.length();
-            System.out.println(countCharacters);
-
-            if (countCharacters < 11 || countCharacters > 11) {
-                System.out.println("För få eller för många tecken");
-            }
-
-            Member member = new Member(
-                    personalIdNrField.getText(),
-                    firstNameField.getText(),
-                    lastNameField.getText(),
-                    membershipLevelField.getText());
-
-            memberRegistry.addMemberToRegistry(member);
-
-            savedStatusLabel.setStyle("-fx-text-fill: #2e2e2e");
-            savedStatusLabel.setText("Följande uppgifter är sparade");
-            printMemberInfo(member, infoAboutMemberTextFlow);
-
-            personalIdNrField.clear();
-            firstNameField.clear();
-            lastNameField.clear();
-            membershipLevelField.clear();
-        });
-
-        GridPane gridPane = new GridPane();
-        gridPane.setVgap(15);
-        gridPane.setStyle("-fx-padding: 30");
-        gridPane.setAlignment(Pos.TOP_CENTER);
-        gridPane.add(headingLabel, 0, 0);
-        gridPane.add(personalIdNrLabel, 0, 2);
-        gridPane.add(personalIdNrField, 0, 3);
-        gridPane.add(firstNameLabel, 0, 4);
-        gridPane.add(firstNameField, 0, 5);
-        gridPane.add(lastNameLabel, 0, 6);
-        gridPane.add(lastNameField, 0, 7);
-        gridPane.add(membershipLevelLabel, 0, 8);
-        gridPane.add(membershipLevelField, 0, 9);
-        gridPane.add(saveButton, 0, 12);
-        gridPane.add(savedStatusLabel, 0, 14);
-        gridPane.add(infoAboutMemberTextFlow, 0, 15);
-
-        Button returnToMenuButton = uiStyler.styleReturnToMenuButton();
-        returnToMenuButton.setOnAction(e -> mainMenuWindow(stage));
-
-        HBox hBox = new HBox();
-        hBox.getChildren().addAll(returnToMenuButton);
-
-        BorderPane borderPane = new BorderPane();
-        borderPane.setCenter(gridPane);
-        borderPane.setBottom(hBox);
-
-        Scene scene = uiStyler.styleWindow(hBox, borderPane);
-        stage.setScene(scene);
-        stage.show();
-    }
-    public void MEDLEMSREGISTER_NY (Stage stage)   {
-
-//        Stage memberRegistryStage = new Stage();
-//        memberRegistryStage.initModality(Modality.APPLICATION_MODAL);      //Detta hindrar klick i huvudfönstret
-//        memberRegistryStage.setTitle("MEDLEMSREGISTER ");
-//
-//        Label headingLabel = new Label("Alla medlemmar");
-//        uiStyler.styleHeadingLabel(headingLabel);
-//
-//        TextField searchTextField = new TextField();
-//        searchTextField.setPromptText("Sök medlem");
-//
-//        Button searchButton = new Button("Sök");
-//        searchButton.setPrefSize(100, 25);
-//        searchButton.setStyle("-fx-background-radius: 5;");
-//        searchButton.setOnAction(e -> {
-//            //KOD SOM SKA SÖKA BLAND MEDLEMMAR. SKICKAS TILL METOD I MembershipService?
-//            //membershipService.searchForMember();
-//        });
-//
-//        HBox onTopHBox = new HBox(searchTextField, searchButton);
-//        onTopHBox.setSpacing(20);
-//
-//        VBox onTopVBox = new VBox();
-//        onTopVBox.setSpacing(10);
-//        onTopVBox.setAlignment(Pos.CENTER);
-//        onTopVBox.setPadding(new Insets(10));
-//        onTopVBox.getChildren().addAll(headingLabel, onTopHBox);
-//
-//        TableView <Member> memberTableView = new TableView<>();
-//        memberTableView.setEditable(true);                                              //???????????
-//        memberTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);     //Eventuellt
-//
-//        TableColumn<Member, String> firstNameColumn = new TableColumn<>("Förnamn");
-//        firstNameColumn.setCellValueFactory(new PropertyValueFactory<>("firstName"));
-//        uiStyler.styleTableColumn(firstNameColumn);
-//        TableColumn<Member, String> lastNameColumn = new TableColumn<>("Efternamn");
-//        lastNameColumn.setCellValueFactory(new PropertyValueFactory<>("lastName"));
-//        uiStyler.styleTableColumn(lastNameColumn);
-//        TableColumn<Member, String> personalIdNumberColumn = new TableColumn<>("Personnummer");
-//        personalIdNumberColumn.setCellValueFactory(new PropertyValueFactory<>("personalIdNumber"));
-//        uiStyler.styleTableColumn(personalIdNumberColumn);
-//        TableColumn<Member, String> membershipLevelColumn = new TableColumn<>("Medlemsnivå");
-//        membershipLevelColumn.setCellValueFactory(new PropertyValueFactory<>("membershipLevel"));
-//        uiStyler.styleTableColumn(membershipLevelColumn);
-//
-//        TableColumn<Member, Void> orderHistoryColumn = new TableColumn<>("Orderhistorik");
-//        orderHistoryColumn.setCellFactory(col -> new TableCell<Member, Void>() {
-//
-//            Button orderHistoryButton = new Button("Klicka");
-//            HBox orderHistoryHBox = new HBox(5);
-//                {
-//                    orderHistoryHBox.setAlignment(Pos.CENTER);
-//                    orderHistoryHBox.getChildren().addAll(orderHistoryButton);
-//                    orderHistoryButton.setOnAction(e -> {
-//                        //KOD FÖR att komma åt ORDERHISTORIK, metodanrop!
-//                    });
-//                }
-//                @Override
-//                protected void updateItem (Void item, boolean empty)    {
-//                super.updateItem(item, empty);
-//                if (empty) {
-//                    setGraphic(null);
-//                } else {
-//                    setGraphic(orderHistoryHBox);
-//                }
-//            }
-//        });
-//
-//        Label showChosenMemberLabel = new Label("");
-//
-//        TableColumn<Member, Void> selectMemberColumn = new TableColumn<>("Välj medlem");
-//        selectMemberColumn.setCellFactory(col -> new TableCell<Member, Void>() {
-//
-//            Button selectMemberButton = new Button("Välj");
-//            HBox selectMemberHBox = new HBox(5);
-//                {
-//                    selectMemberHBox.setAlignment(Pos.CENTER);
-//                    selectMemberHBox.getChildren().addAll(selectMemberButton);
-//                    selectMemberButton.setOnAction(e -> {
-//
-//                    Member selectedMember = getTableView().getItems().get(getIndex());
-//                    memberInstansvariabel = selectedMember;
-//                    showChosenMemberLabel.setText(memberInstansvariabel.toString());
-//                    });
-//                }
-//                @Override
-//                protected void updateItem (Void item, boolean empty)    {
-//                super.updateItem(item, empty);
-//                if (empty) {
-//                    setGraphic(null);
-//                } else {
-//                    setGraphic(selectMemberHBox);
-//                }
-//            }
-//        });
-//
-//        memberTableView.getColumns().addAll(firstNameColumn, lastNameColumn,
-//                personalIdNumberColumn, membershipLevelColumn, orderHistoryColumn, selectMemberColumn);
-//        memberTableView.setStyle(
-//            "-fx-border-color: black;" +
-//                    "-fx-border-width: 1;"
-//            // +
-//            //"-fx-padding: 5;"
-//        );
-//
-//        //List<Member> memberList = memberRegistry.getMemberList();
-//        membersObservableList = memberRegistry.getMembersObservableList();
-//        memberTableView.setItems(membersObservableList);
-//
-//
-//        Button valdMedlemKlarButton = new Button("Klar");
-//        uiStyler.styleOrdinaryButton(valdMedlemKlarButton);
-//        valdMedlemKlarButton.setOnAction(e -> memberRegistryStage.close());
-//            //*******INUTI DENNA ACTIONEVENT*********
-//            //   - Felhantering, "Du har inte valt medlem"
-//           //valdMedlemKlarButton.setDisable(true);
-//           //valdMedlemKlarButton.setDisable(false);
-//
-//        HBox bottomHBox = new HBox();
-//        bottomHBox.setSpacing(70);
-//        bottomHBox.setStyle("-fx-padding: 20");
-//        bottomHBox.setAlignment(Pos.BOTTOM_RIGHT);
-//        bottomHBox.getChildren().addAll(showChosenMemberLabel, valdMedlemKlarButton);
-//
-//        BorderPane borderPane = new BorderPane();
-//        borderPane.setTop(onTopVBox);
-//        BorderPane.setMargin(onTopHBox, new Insets(10));
-//        borderPane.setCenter(memberTableView);
-//        borderPane.setBottom(bottomHBox);
-//
-//        Scene scene = new Scene(borderPane, 800, 750);
-//        memberRegistryStage.setScene(scene);
-//        memberRegistryStage.showAndWait();         //showAndWait låser huvudfönstret.
-    }
-    public void vehicleRegistryWindow(Stage stage) {
-        stage.setTitle("FORDONSREGISTER ");
-
-        Label headingLabel = new Label("Alla fordon");
-        uiStyler.styleHeadingLabel(headingLabel);
-
-        //************TRAILERS************
-
-        TableView <Trailer> trailersTableView = new TableView();      //Metod som fixar?
-        trailersTableView.setEditable(false);                         //VAD GÖR DENNA
-        trailersTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-
-        VBox vBoxTrailer = new VBox();
-        vBoxTrailer.getChildren().addAll(trailersTableView);
-        vBoxTrailer.setPadding(new Insets(10, 10, 0, 10));
-
-        TableColumn<Trailer, String> brandColumn = new TableColumn("Märke");
-        brandColumn.setCellValueFactory(new PropertyValueFactory<>("brand"));
-
-        TableColumn <Trailer, Number> priceColumn = new TableColumn("Pris (kr/dag)");
-        priceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
-
-        TableColumn <Trailer, Number> lengthColumn = new TableColumn("Längd (cm)");
-        lengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
-
-        TableColumn <Trailer, Number> widthColumn = new TableColumn("Bredd (cm)");
-        widthColumn.setCellValueFactory(new PropertyValueFactory<>("width"));
-
-        TableColumn <Trailer, Number> itemNumberColumn = new TableColumn("Artikelnummer");
-        itemNumberColumn.setCellValueFactory(new PropertyValueFactory<>("itemNumber"));
-
-        trailersTableView.getColumns().addAll(brandColumn, priceColumn, lengthColumn, widthColumn, itemNumberColumn);
-        trailersTableView.setStyle("-fx-border-color: black;" + "-fx-border-width: 1;");
-
-        TabPane tabPane = new TabPane();
-        tabPane.getStyleClass().add("spaced-tabs");
-        tabPane.setStyle("-fx-padding: 10");
-
-        Tab trailersTab = new Tab();
-        Label trailersLabel = new Label("Släpvagnar");
-        uiStyler.styleTabs(trailersLabel, trailersTab);
-        trailersTab.setGraphic(trailersLabel);
-        trailersTab.setContent(vBoxTrailer);                //VBOXEN HÄR
-
-        List<Trailer> trailerList = rentalService.filterItemsEndastTrailersDEN_NYA();
-        ObservableList<Trailer> trailers = FXCollections.observableArrayList(trailerList);
-        trailersTableView.setItems(trailers);
-
-        //************LAWNMOWERS************
-
-        TableView <LawnMower> lawnMowersTableView = new TableView();      //Metod som fixar?
-        lawnMowersTableView.setEditable(false);                         //VAD GÖR DENNA
-        lawnMowersTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-
-        VBox vBoxLawnMower = new VBox();
-        vBoxLawnMower.getChildren().addAll(lawnMowersTableView);
-        vBoxLawnMower.setPadding(new Insets(10, 10, 0, 10));
-
-        Tab lawnMowersTab = new Tab();
-        Label lawnMowersLabel = new Label("Gräsklippare");
-        uiStyler.styleTabs(lawnMowersLabel, lawnMowersTab);
-        lawnMowersTab.setGraphic(lawnMowersLabel);
-        lawnMowersTab.setContent(lawnMowersTableView);
-
-        //************ALLA************
-
-        Tab allVehiclesTab = new Tab();
-        Label allVehiclesLabel = new Label("Alla fordon");
-        uiStyler.styleTabs(allVehiclesLabel, allVehiclesTab);
-        allVehiclesTab.setGraphic(allVehiclesLabel);
-
-         //***********************
-
-        tabPane.getTabs().addAll(trailersTab, lawnMowersTab, allVehiclesTab);
-
-        Button returnToMenuButton = uiStyler.styleReturnToMenuButton();
-        returnToMenuButton.setOnAction(e -> mainMenuWindow(stage));
-
-        HBox hBox = new HBox();
-        hBox.getChildren().addAll(returnToMenuButton);
-
-        BorderPane borderPaneMain = new BorderPane();
-        borderPaneMain.setTop(headingLabel);
-        BorderPane.setAlignment(headingLabel, Pos.CENTER);
-        BorderPane.setMargin(headingLabel, new Insets(10));
-        borderPaneMain.setCenter(tabPane);
-
-        Scene scene = uiStyler.styleWindow(hBox, borderPaneMain);
-        stage.setScene(scene);
-        stage.show();
-    }
-
 
     public static void main(String[] args) {
          launch(args);
