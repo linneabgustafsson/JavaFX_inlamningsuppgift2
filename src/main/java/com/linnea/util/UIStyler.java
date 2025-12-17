@@ -55,16 +55,41 @@ public class UIStyler {
                 "-fx-border-width: 1.5;" +
                 "-fx-border-radius: 10;"
         );
-        dropdownMenuButton.setPrefSize(200, 50);
+        dropdownMenuButton.setPrefSize(210, 50);
     }
 
     public void styleHeadingLabel(Label headingLabel)  {
         headingLabel.setFont(Font.font("Arial", FontWeight.BOLD, 20));
     }
 
+    public void styleLabelinForm(Label label)  {
+        label.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+    }
+
+    public void styleTextFieldinForm(TextField textField)  {
+        textField.setMinWidth(190);
+        textField.setMaxWidth(190);
+    }
+
+    public void styledropdownMenuButtoninForm(Button dropdownMenuButton)  {
+        dropdownMenuButton.setMinWidth(150);
+        dropdownMenuButton.setMaxWidth(150);
+        dropdownMenuButton.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+        dropdownMenuButton.setStyle(
+                "-fx-background-color: #85a199;" +
+                "-fx-background-radius: 10;" +
+                "-fx-border-color: black;" +
+                "-fx-border-width: 1.5;" +
+                "-fx-border-radius: 10;"
+        );
+    }
+
     public void styleTabs(Label label, Tab tab)    {
-        label.setPadding(new Insets(10, 22, 10, 22));
+        label.setFont(Font.font("Arial", FontWeight.BOLD, 16));
         tab.setClosable(false);
+        tab.setGraphic(label);
+        tab.getStyleClass().add("tab-pane");
+
     }
 
     public void styleHBoxBooking(HBox hBox) {
